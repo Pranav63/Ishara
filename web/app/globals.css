@@ -542,10 +542,10 @@ html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover
 .privacy svg { flex: none; }
 .composer .big { font-size: 15px; padding: 12px 16px; }
 .samples { align-items: center; }
-.resident-home .banner { position: static; transform: none; width: auto; max-width: 1168px; margin: 16px auto 0; border: 1px solid var(--line); box-shadow: none; }
-.resident-home { min-height: 100dvh; background: var(--bg); }
-.resident-home .header { position: relative; inset: auto; max-width: 1216px; margin: 0 auto; padding: 20px 24px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.resident-grid { max-width: 1216px; min-height: calc(100svh - var(--head-h)); margin: 0 auto; padding: 24px 24px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); grid-template-rows: 1fr auto; gap: 24px 64px; align-items: center; }
+.resident-home .banner { position: static; transform: none; width: calc(100% - 32px); max-width: 1168px; margin: 16px auto 0; border: 1px solid var(--line); box-shadow: none; }
+.resident-home { min-height: 100svh; display: flex; flex-direction: column; background: var(--bg); }
+.resident-home .header { width: 100%; position: relative; inset: auto; max-width: 1216px; margin: 0 auto; padding: 20px 24px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.resident-grid { width: 100%; max-width: 1216px; flex: 1; margin: 0 auto; padding: 24px 24px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); grid-template-rows: 1fr auto; gap: 24px 64px; align-items: center; }
 .resident-intro { display: grid; gap: 20px; min-width: 0; }
 .service-label { display: flex; align-items: center; gap: 9px; color: var(--ink-2); font-size: 13px; font-weight: 600; }
 .resident-intro h1 { font-size: clamp(40px, 4.2vw, 56px); letter-spacing: -.035em; line-height: 1.12; font-weight: 600; }

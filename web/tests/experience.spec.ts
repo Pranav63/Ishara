@@ -123,6 +123,15 @@ for (const lang of ["en", "ar"]) {
   });
 }
 
+test("service warning shares the desktop viewport with the request form", async ({ page }) => {
+  await page.route("**/api/config", route => route.fulfill({ status: 503, json: { detail: "Unavailable" } }));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await expect(page.locator(".banner[role=alert]")).toHaveText(/service is unavailable/);
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  await expect(page.getByLabel("Your appointment message")).toBeInViewport();
+});
+
 test("welcome animation respects motion and text-first preferences", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setViewportSize({ width: 1280, height: 900 });
