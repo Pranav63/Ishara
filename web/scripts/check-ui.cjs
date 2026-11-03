@@ -16,6 +16,9 @@ assert.equal(parsePrefs('{"lang":"ar","theme":"dark","contrast":true,"size":2,"t
 assert.equal(parsePrefs('{"lang":"xx","theme":"invalid","size":99,"alerts":"yes"}').theme, 'system');
 assert.equal(parsePrefs('{"size":99,"alerts":"yes"}').size, 0);
 assert.equal(parsePrefs('{"alerts":"yes"}').alerts, false);
+assert.equal(parsePrefs('{}').companion, 'falcon');
+assert.equal(parsePrefs('{"companion":"robot"}').companion, 'falcon');
+for (const companion of ['falcon', 'fox', 'pearl']) assert.equal(parsePrefs(JSON.stringify({ companion })).companion, companion);
 const { dubaiEpoch, dubaiInputValue } = load('review.ts');
 const expected = Date.UTC(2026, 10, 12, 6, 30) / 1000;
 assert.equal(dubaiEpoch('2026-11-12T10:30'), expected);
