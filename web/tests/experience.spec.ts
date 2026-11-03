@@ -76,10 +76,11 @@ for (const lang of ["en", "ar"]) for (const size of [0, 2]) {
   });
 }
 
-test("landing start action focuses the message and an example can be reviewed", async ({ page }) => {
+test("landing starts with the message form and an example can be reviewed", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page.getByRole("link", { name: "Start a request", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Start a request", exact: true })).toHaveCount(0);
+  await page.getByLabel("Your appointment message").click();
   await expect(page.getByLabel("Your appointment message")).toBeFocused();
   await page.locator(".request-examples summary").click();
   await page.getByRole("button", { name: "Hospital", exact: true }).click();
@@ -98,11 +99,42 @@ test("Arabic landing reflows at 320px and help works with a keyboard", async ({ 
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  const question = page.locator(".resident-questions summary").first();
+  await expect(page.locator(".resident-help, .resident-questions")).toHaveCount(0);
+  await openMenu(page, "ar");
+  await page.locator(".workspace-help > summary").focus();
+  await page.keyboard.press("Enter");
+  const question = page.getByText("من يستخدم عرض المنسق؟", { exact: true });
   await question.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".resident-questions details").first()).toHaveAttribute("open", "");
+  await expect(page.locator(".how details").first()).toHaveAttribute("open", "");
   await expect(page.locator(".prototype-note")).toBeVisible();
+});
+
+for (const lang of ["en", "ar"]) {
+  test(`landing fits desktop and phone screens (${lang})`, async ({ page }) => {
+    await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, theme: "light" })), lang);
+    await page.goto("/");
+    await page.evaluate(() => document.fonts.ready);
+    for (const [width, height] of [[390, 844], [1280, 720], [1440, 900]]) {
+      await page.setViewportSize({ width, height });
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+      await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة التفاصيل" : "Review details", exact: true })).toBeInViewport();
+    }
+  });
+}
+
+test("welcome animation respects motion and text-first preferences", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await expect(page.locator(".welcome-ink")).toHaveCSS("animation-name", "welcome-connect");
+  await openSettings(page);
+  await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
+  await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");
+  await page.getByLabel("Reduce motion", { exact: true }).check();
+  await expect(page.locator(".welcome-ink")).toHaveCSS("animation-name", "none");
+  await page.getByLabel("Text-first mode", { exact: true }).check();
+  await expect(page.locator(".welcome-art")).toBeHidden();
 });
 
 test("new request shows the task, keeps extras collapsed, and Cancel preserves the draft", async ({ page }) => {
@@ -237,7 +269,7 @@ test("workspace menu is keyboard accessible and returns focus after actions", as
   await expect(page.locator(".drawer")).toBeHidden();
   await expect(trigger).toBeFocused();
   await page.keyboard.press("Enter");
-  await page.locator(".workspace-help summary").focus();
+  await page.locator(".workspace-help > summary").focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".workspace-help .how")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -280,6 +312,7 @@ test("coordinator sign in retains validation and sign out from the grouped menu"
   });
   await page.goto("/");
   await openMenu(page);
+  await expect(page.getByRole("button", { name: "Coordinator", exact: true })).toHaveCount(0);
   await page.locator(".workspace-login summary").click();
   await page.getByLabel("Access key", { exact: true }).fill("wrong-key");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();

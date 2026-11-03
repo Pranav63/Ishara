@@ -30,6 +30,8 @@ The shared display controls switch the interface between English and Arabic, inc
 
 ## Request review and coordinator queue
 
+The home page is the resident's request form. Submitting opens a private request page for review; after confirmation, the resident follows matching and arrival updates there. Coordinator is a staff workspace in Menu, available after operator sign-in or in explicit demo mode. Residents do not need that workspace to request an interpreter. Help, privacy information and display settings are in Menu.
+
 After parsing, requests remain in `reviewing` until the resident confirms the place, Dubai date/time, duration, domain and sign language. The private requester link allows corrections and approval; no interpreter receives an offer before approval. Telegram also requires the requester to confirm the parsed appointment and accepts private chats only; groups and channels cannot create or act on requests.
 
 Operator sign-in uses an HttpOnly session cookie. Request lists, interpreter invites, metrics, the full activity stream and the coordinator queue require operator access outside explicit demo mode. Requester and interpreter live streams use their private link token and send refresh signals scoped to that role. Keep invite links private: possession of a link grants that role's access.
