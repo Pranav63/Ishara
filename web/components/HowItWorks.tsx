@@ -1,0 +1,16 @@
+"use client";
+
+import { CircleHelp } from "lucide-react";
+import { useLanguage } from "@/components/Preferences";
+import { Popover } from "@/components/ui";
+
+export function HowItWorks() {
+  const { t } = useLanguage();
+  const steps = [
+    [t("Read & review", "قراءة ومراجعة"), t("Ishara reads the appointment message and hides contact and ID numbers. The resident checks the date, place and sign language before matching starts.", "تقرأ إشارة رسالة الموعد وتحجب بيانات الاتصال والهوية. يراجع طالب الخدمة التاريخ والمكان ولغة الإشارة قبل بدء المطابقة.")],
+    [t("Match", "مطابقة"), t("Eligible interpreters with the right sign language and a free slot receive offers. Medical and legal appointments require certification.", "يتلقى المترجمون المؤهلون المتاحون بلغة الإشارة المناسبة عروضاً. تتطلب المواعيد الطبية والقانونية الاعتماد المهني.")],
+    [t("Confirm", "تأكيد"), t("A booking is confirmed when an interpreter accepts. Arrival updates come from the interpreter, without GPS tracking.", "يُؤكد الحجز عند قبول مترجم. يشارك المترجم تحديثات الوصول دون تتبع الموقع.")],
+    [t("Get more support", "دعم إضافي"), t("Cancellations trigger rematching. If no match is available, the request enters the coordinator queue and remote support is offered.", "يؤدي الاعتذار إلى إعادة المطابقة. إذا لم يتوفر مترجم، يدخل الطلب قائمة انتظار المنسق ويُعرض الدعم عن بُعد.")],
+  ];
+  return <Popover label={t("How Ishara works", "كيف تعمل إشارة")} align="end" wide trigger={<span className="icon-btn as-span"><CircleHelp size={20} aria-hidden /></span>}><div className="how"><h2>{t("How Ishara works", "كيف تعمل إشارة")}</h2><ol>{steps.map(([title, detail]) => <li key={title}><strong>{title}</strong><p>{detail}</p></li>)}</ol></div></Popover>;
+}
