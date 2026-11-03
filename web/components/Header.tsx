@@ -30,7 +30,7 @@ export function Progress({ status }: { status?: Status }) {
   );
 }
 
-export function Header({ status, connection, children }: { status?: Status; connection?: React.ReactNode; children: React.ReactNode }) {
+export function Header({ status, children }: { status?: Status; children: React.ReactNode }) {
   const { t } = useLanguage();
   const ref = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
@@ -53,7 +53,7 @@ export function Header({ status, connection, children }: { status?: Status; conn
         </Link>
         <div className="header-actions">{children}</div>
       </div>
-      {(status || connection) && <div className="header-status">{status && <Progress status={status} />}{connection}</div>}
+      {status && <div className="header-status"><Progress status={status} /></div>}
     </header>
   );
 }

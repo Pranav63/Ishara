@@ -1,20 +1,21 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/components/Preferences";
-import { InfoTip, Popover } from "@/components/ui";
 import { api } from "@/lib/api";
 
-export function Connection({ online, llm }: { online: boolean; llm?: string }) {
+export function Connection({ online }: { online: boolean }) {
   const { t } = useLanguage();
-  return <span className={`conn hide-sm${online ? "" : " off"}`}><i aria-hidden />{online ? t("Connected", "متصل") : t("Service unavailable", "الخدمة غير متاحة")}{online && <InfoTip label={t("About the assistant", "عن المساعد")} align="end">{t(`Appointment details are read using ${llm === "Rules only" ? "rules" : llm ?? "the configured parser"}. Eligibility and matching follow service rules.`, "تُقرأ تفاصيل الموعد باستخدام المحلل المُهيأ. تتبع الأهلية والمطابقة قواعد الخدمة.")}</InfoTip>}</span>;
+  return <span className={`conn${online ? "" : " off"}`} role="status"><i aria-hidden />{online ? t("Connected", "متصل") : t("Service unavailable", "الخدمة غير متاحة")}</span>;
 }
 
 export function ResetButton({ onDone }: { onDone: () => void }) {
   const { t } = useLanguage();
   const [error, setError] = useState<string | null>(null);
-  return <Popover label={t("Reset demo", "إعادة تعيين العرض")} align="end" trigger={<span className="icon-btn as-span"><RotateCcw size={19} aria-hidden /></span>}>{(close) => <div className="confirm"><strong>{t("Clear all demo requests?", "حذف جميع الطلبات التجريبية؟")}</strong><p>{t("Interpreters stay. The map and activity start fresh.", "يبقى المترجمون. تبدأ الخريطة وسجل النشاط من جديد.")}</p><div className="row"><button className="btn small" onClick={close}>{t("Keep", "إبقاء")}</button><button className="btn small danger" onClick={async () => { try { await api.reset(); onDone(); close(); } catch (e) { setError((e as Error).message); } }}>{t("Reset", "إعادة تعيين")}</button></div>{error && <p className="error" role="alert">{error}</p>}</div>}</Popover>;
+  const details = useRef<HTMLDetailsElement>(null);
+  const close = () => details.current?.removeAttribute("open");
+  return <details ref={details} className="workspace-reset"><summary><RotateCcw size={18} aria-hidden />{t("Reset demo", "إعادة تعيين العرض")}</summary><div className="confirm"><strong>{t("Clear all demo requests?", "حذف جميع الطلبات التجريبية؟")}</strong><p>{t("Interpreters stay. The map and activity start fresh.", "يبقى المترجمون. تبدأ الخريطة وسجل النشاط من جديد.")}</p><div className="row"><button className="btn small" onClick={close}>{t("Keep", "إبقاء")}</button><button className="btn small danger" onClick={async () => { try { await api.reset(); onDone(); close(); } catch (e) { setError((e as Error).message); } }}>{t("Reset", "إعادة تعيين")}</button></div>{error && <p className="error" role="alert">{error}</p>}</div></details>;
 }
 
 export function OfflineBanner({ online }: { online: boolean }) {

@@ -42,13 +42,18 @@ export function useLanguage() {
   return { lang: prefs.lang, isAr: prefs.lang === "ar", t: (en: string, ar: string) => prefs.lang === "ar" ? ar : en };
 }
 
-export function DisplaySettings({ inline = false }: { inline?: boolean }) {
+export function LanguageToggle() {
+  const { prefs, update } = usePreferences();
+  return <button className="btn small language-toggle" onClick={() => update({ lang: prefs.lang === "en" ? "ar" : "en" })} lang={prefs.lang === "en" ? "ar" : "en"}><Languages size={17} aria-hidden />{prefs.lang === "en" ? "العربية" : "English"}</button>;
+}
+
+export function DisplaySettings({ inline = false, embedded = false }: { inline?: boolean; embedded?: boolean }) {
   const { prefs, update } = usePreferences();
   const { t } = useLanguage();
   const controls = <div className="display-settings">
     <h2>{t("Make Ishara yours", "إشارة كما تناسبك")}</h2>
-    <label htmlFor={inline ? "theme-inline" : "theme-menu"}>{t("Appearance", "المظهر")}</label>
-    <select id={inline ? "theme-inline" : "theme-menu"} value={prefs.theme} onChange={(e) => update({ theme: e.target.value as Prefs["theme"] })}>
+    <label htmlFor={inline || embedded ? "theme-inline" : "theme-menu"}>{t("Appearance", "المظهر")}</label>
+    <select id={inline || embedded ? "theme-inline" : "theme-menu"} value={prefs.theme} onChange={(e) => update({ theme: e.target.value as Prefs["theme"] })}>
       <option value="system">{t("Use device setting", "حسب إعدادات الجهاز")}</option><option value="light">{t("Light", "فاتح")}</option><option value="dark">{t("Dark", "داكن")}</option>
     </select>
     <div className="a11y-bar">
@@ -63,8 +68,10 @@ export function DisplaySettings({ inline = false }: { inline?: boolean }) {
     <label className="setting-check"><input type="checkbox" checked={prefs.reducedMotion} onChange={(e) => update({ reducedMotion: e.target.checked })} />{t("Reduce motion", "تقليل الحركة")}</label>
     <label className="setting-check"><input type="checkbox" checked={prefs.alerts} disabled={prefs.textOnly} onChange={(e) => update({ alerts: e.target.checked })} />{t("Visual and vibration alerts", "تنبيهات مرئية واهتزازية")}</label>
   </div>;
+  const disclosure = <details className="display-details"><summary><Settings2 size={18} aria-hidden />{t("Display & accessibility", "العرض وإمكانية الوصول")}</summary>{controls}</details>;
+  if (embedded) return disclosure;
   return <div className="display-controls">
-    <button className="btn small language-toggle" onClick={() => update({ lang: prefs.lang === "en" ? "ar" : "en" })} lang={prefs.lang === "en" ? "ar" : "en"}><Languages size={17} aria-hidden />{prefs.lang === "en" ? "العربية" : "English"}</button>
-    {inline ? <details className="display-details"><summary>{t("Display & accessibility", "العرض وإمكانية الوصول")}</summary>{controls}</details> : <Popover label={t("Display & accessibility", "العرض وإمكانية الوصول")} align="end" trigger={<span className="icon-btn as-span"><Settings2 size={20} aria-hidden /></span>}>{controls}</Popover>}
+    <LanguageToggle />
+    {inline ? disclosure : <Popover label={t("Display & accessibility", "العرض وإمكانية الوصول")} align="end" trigger={<span className="icon-btn as-span"><Settings2 size={20} aria-hidden /></span>}>{controls}</Popover>}
   </div>;
 }

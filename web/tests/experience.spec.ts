@@ -23,14 +23,30 @@ async function mockService(page: Page) {
   });
 }
 
+async function openMenu(page: Page, lang = "en") {
+  await page.getByRole("button", { name: lang === "ar" ? "القائمة" : "Menu", exact: true }).click();
+}
+
+async function coordinatorView(page: Page, lang = "en") {
+  await openMenu(page, lang);
+  await page.getByRole("button", { name: lang === "ar" ? "المنسق" : "Coordinator", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: lang === "ar" ? "القائمة" : "Menu", exact: true })).toBeHidden();
+}
+
+async function openSettings(page: Page, lang = "en") {
+  await openMenu(page, lang);
+  await page.locator(".display-details summary").click();
+}
+
 test.beforeEach(async ({ page }) => { await mockService(page); });
 
 for (const lang of ["en", "ar"]) for (const size of [0, 2]) {
   test(`coordinator header reflows without collisions (${lang}, text size ${size})`, async ({ page }) => {
     await page.addInitScript(prefs => localStorage.setItem("ishara.prefs", JSON.stringify(prefs)), { lang, size, theme: "dark" });
     await page.goto("/");
-    await page.getByRole("button", { name: lang === "ar" ? "المنسق" : "Coordinator", exact: true }).click();
+    await coordinatorView(page, lang);
     await expect(page.locator(".progress")).toBeVisible();
+    await expect(page.locator(".header-main").getByRole("button")).toHaveCount(2);
     for (const width of [320, 390, 768, 1024, 1181, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
       await expect.poll(() => page.evaluate(() => {
@@ -52,6 +68,7 @@ for (const lang of ["en", "ar"]) for (const size of [0, 2]) {
       });
       expect(collisions, `${width}px`).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px overflow`).toBe(true);
+      if (size === 0) await expect.poll(async () => (await page.locator(".header-main").boundingBox())!.height, { message: `${width}px compact toolbar` }).toBeLessThanOrEqual(56);
     }
   });
 }
@@ -88,7 +105,7 @@ test("Arabic landing reflows at 320px and help works with a keyboard", async ({ 
 test("new request shows the task, keeps extras collapsed, and Cancel preserves the draft", async ({ page }) => {
   await page.route("**/api/places", route => route.fulfill({ json: { "Oud Metha": [25.24, 55.31] } }));
   await page.goto("/");
-  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await coordinatorView(page);
   await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Done");
   await expect(page.locator(".map-full").getByText("Rashid Hospital", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "New request", exact: true }).click();
@@ -119,7 +136,7 @@ test("a new submission uses its own status while the latest snapshot catches up"
   await page.route("**/api/requests/latest", route => route.fulfill({ json: latest }));
   await page.route("**/api/requests", route => route.fulfill({ json: created }));
   await page.goto("/");
-  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await coordinatorView(page);
   await page.getByRole("button", { name: "New request", exact: true }).click();
   await page.getByLabel("Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
   const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/requests/latest");
@@ -133,10 +150,11 @@ test("a new submission uses its own status while the latest snapshot catches up"
 
 test("resetting a collapsed conversation leaves the new request form editable", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await coordinatorView(page);
   await page.getByRole("button", { name: "Collapse conversation", exact: true }).click();
   await page.route("**/api/requests/latest", route => route.fulfill({ json: null }));
-  await page.getByRole("button", { name: "Reset demo", exact: true }).click();
+  await openMenu(page);
+  await page.locator(".workspace-reset summary").click();
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   await expect(page.getByLabel("Your appointment message")).toBeVisible();
 });
@@ -146,7 +164,7 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
     await page.addInitScript(prefs => localStorage.setItem("ishara.prefs", JSON.stringify(prefs)), { lang, theme, size: 2 });
     await page.setViewportSize({ width: 320, height: 1000 });
     await page.goto("/");
-    await page.getByRole("button", { name: lang === "ar" ? "المنسق" : "Coordinator", exact: true }).click();
+    await coordinatorView(page, lang);
     await page.getByRole("button", { name: lang === "ar" ? "طلب جديد" : "New request", exact: true }).click();
     await page.getByLabel(lang === "ar" ? "رسالة موعدك" : "Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
     const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة التفاصيل" : "Review details", exact: true });
@@ -160,8 +178,8 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
     const rect = await review.boundingBox();
     expect(rect!.width).toBeGreaterThanOrEqual(44);
     expect(rect!.height).toBeGreaterThanOrEqual(44);
-    const settings = lang === "ar" ? "العرض وإمكانية الوصول" : "Display & accessibility";
-    await page.getByRole("button", { name: settings, exact: true }).click();
+    const settings = lang === "ar" ? "القائمة" : "Menu";
+    await openSettings(page, lang);
     await expect(page.getByRole("dialog", { name: settings, exact: true })).toHaveCSS("opacity", "1");
     const popup = await page.getByRole("dialog", { name: settings, exact: true }).boundingBox();
     expect(popup!.x).toBeGreaterThanOrEqual(0);
@@ -172,25 +190,105 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
 test("companion choice lives in display settings and text-first mode keeps entry simple", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 1000 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await coordinatorView(page);
   await page.getByRole("button", { name: "New request", exact: true }).click();
-  await page.getByRole("button", { name: "Display & accessibility", exact: true }).click();
-  const bounds = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
+  await openSettings(page);
+  const bounds = await page.getByRole("dialog", { name: "Menu", exact: true }).boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
   await page.setViewportSize({ width: 390, height: 1000 });
   await expect.poll(async () => {
-    const rect = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
+    const rect = await page.getByRole("dialog", { name: "Menu", exact: true }).boundingBox();
     return rect!.x >= 0 && rect!.x + rect!.width <= 390;
   }).toBe(true);
   await page.getByRole("button", { name: "Pearl", exact: true }).click();
   await expect(page.locator(".sheet-head .companion-pearl")).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await coordinatorView(page);
   await page.getByRole("button", { name: "New request", exact: true }).click();
   await expect(page.locator(".sheet-head .companion-pearl")).toBeVisible();
-  await page.getByRole("button", { name: "Display & accessibility", exact: true }).click();
+  await openSettings(page);
   await page.getByLabel("Text-first mode", { exact: true }).check();
   await expect(page.locator(".sheet-head .companion-touch")).toHaveCount(0);
   await expect(page.getByLabel("Your appointment message")).toBeVisible();
+});
+
+test("workspace menu is keyboard accessible and returns focus after actions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await coordinatorView(page);
+  const trigger = page.getByRole("button", { name: "Menu", exact: true });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Close menu", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Requester view", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Activity & support", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".drawer")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close activity", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".drawer")).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.locator(".workspace-help summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".workspace-help .how")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test("demo reset stays behind confirmation and the menu retains presentation and view switching", async ({ page }) => {
+  let resets = 0;
+  await page.route("**/api/demo/reset", route => { resets++; return route.fulfill({ json: { ok: true } }); });
+  await page.goto("/");
+  await coordinatorView(page);
+  await openMenu(page);
+  await expect(page.getByRole("link", { name: "Presentation", exact: true })).toHaveAttribute("href", "/stage");
+  await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeHidden();
+  await page.locator(".workspace-reset summary").click();
+  await page.getByRole("button", { name: "Keep", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeHidden();
+  expect(resets).toBe(0);
+  await page.locator(".workspace-reset summary").click();
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect.poll(() => resets).toBe(1);
+  await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
+  await openMenu(page);
+  await page.getByRole("button", { name: "Requester view", exact: true }).click();
+  await expect(page.locator(".resident-intro")).toBeVisible();
+});
+
+test("coordinator sign in retains validation and sign out from the grouped menu", async ({ page }) => {
+  let authenticated = false;
+  await page.route("**/api/config", route => route.fulfill({ json: { demo: false, operator_auth_required: true, llm: "Rules only" } }));
+  await page.route("**/api/operator/session", route => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      if (request.postDataJSON().key !== "test-key") return route.fulfill({ status: 401, json: { detail: "Invalid access key" } });
+      authenticated = true;
+    }
+    if (request.method() === "DELETE") authenticated = false;
+    return route.fulfill({ json: { authenticated, demo: false } });
+  });
+  await page.goto("/");
+  await openMenu(page);
+  await page.locator(".workspace-login summary").click();
+  await page.getByLabel("Access key", { exact: true }).fill("wrong-key");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.locator(".workspace-login").getByRole("alert")).toHaveText("Invalid access key");
+  await page.getByLabel("Access key", { exact: true }).fill("test-key");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.locator(".progress")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
+  await openMenu(page);
+  await expect(page.locator(".workspace-reset")).toHaveCount(0);
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(page.locator(".resident-intro")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
+  expect(authenticated).toBe(false);
 });

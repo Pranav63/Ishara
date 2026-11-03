@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRight, Check, Hand, Play } from "lucide-react";
+import { Activity, ArrowRight, Check, Hand, Menu, Play, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,9 +12,9 @@ import { LiveMap } from "@/components/LiveMap";
 import { MotionRoot } from "@/components/Motion";
 import { OfferDock } from "@/components/OfferDock";
 import { OperatorAccess } from "@/components/OperatorAccess";
-import { DisplaySettings, useLanguage } from "@/components/Preferences";
+import { DisplaySettings, LanguageToggle, useLanguage } from "@/components/Preferences";
 import { RequesterSheet } from "@/components/RequesterSheet";
-import { IconButton } from "@/components/ui";
+import { Popover } from "@/components/ui";
 import { api, type OperatorSession } from "@/lib/api";
 import { useLive, useNow } from "@/lib/live";
 import type { Snapshot } from "@/lib/types";
@@ -52,11 +52,21 @@ export default function Console() {
   const online = !serviceError && !error;
 
   return <MotionRoot><div className={`${coordinator ? "console-view" : "resident-home"}${drawer ? " drawer-open" : ""}`}>
-    <Header status={coordinator ? activeSnap?.status : undefined} connection={coordinator ? <Connection online={online} llm={data?.config.llm} /> : undefined}>
-      <DisplaySettings />
-      {session?.authenticated && <button className="btn small view-switch" onClick={() => setMode(coordinator ? "resident" : "coordinator")}>{coordinator ? t("Requester", "طالب الخدمة") : t("Coordinator", "المنسق")}</button>}
-      <OperatorAccess session={session} authRequired={authRequired} onChange={(s) => { setSession(s); setServiceError(false); if (s.authenticated) setMode("coordinator"); }} />
-      {coordinator && <><HowItWorks /><IconButton label={t("Agent activity", "نشاط الوكيل")} badge={events.length} pressed={drawer} onClick={() => setDrawer((d) => !d)}><Activity size={19} aria-hidden /></IconButton>{data?.config.demo && <><ResetButton onDone={() => { setCreated(null); setCompose(false); refresh(); }} /><Link className="btn small primary hide-sm" href="/stage"><Play size={15} aria-hidden />{t("Present", "عرض")}</Link></>}</>}
+    <Header status={coordinator ? activeSnap?.status : undefined}>
+      <LanguageToggle />
+      <Popover label={t("Menu", "القائمة")} align="end" trigger={<span className="btn small menu-toggle"><Menu size={18} aria-hidden />{t("Menu", "القائمة")}</span>}>
+        {(close) => <div className="workspace-menu">
+          <div className="workspace-menu-head"><div><h2>{coordinator ? t("Coordinator", "المنسق") : t("Ishara", "إشارة")}</h2><Connection online={online} /></div><button type="button" className="icon-btn" aria-label={t("Close menu", "إغلاق القائمة")} onClick={close}><X size={18} aria-hidden /></button></div>
+          <div className="workspace-actions">
+            {session?.authenticated && <button type="button" onClick={() => { setMode(coordinator ? "resident" : "coordinator"); close(); }}><Users size={18} aria-hidden />{coordinator ? t("Requester view", "عرض طالب الخدمة") : t("Coordinator", "المنسق")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></button>}
+            {coordinator && <button type="button" onClick={() => { close(); setDrawer(true); }}><Activity size={18} aria-hidden />{t("Activity & support", "النشاط والدعم")}{events.length > 0 && <span className="workspace-count num">{events.length}</span>}</button>}
+            {coordinator && data?.config.demo && <Link href="/stage" onClick={close}><Play size={18} aria-hidden />{t("Presentation", "العرض التقديمي")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></Link>}
+          </div>
+          <DisplaySettings embedded />
+          <HowItWorks />
+          <div className="workspace-session"><OperatorAccess session={session} authRequired={authRequired} onChange={(s) => { setSession(s); setServiceError(false); if (s.authenticated) setMode("coordinator"); close(); }} />{coordinator && data?.config.demo && <ResetButton onDone={() => { setCreated(null); setCompose(false); refresh(); close(); }} />}</div>
+        </div>}
+      </Popover>
     </Header>
     <OfflineBanner online={online} />
     {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setCompose(false); } refresh(); }} />{!compose && <OfferDock snap={snap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
