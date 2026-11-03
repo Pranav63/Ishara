@@ -60,13 +60,13 @@ export function LiveMap({ places, interpreters, snap, now, padding }: { places: 
         m.on("load", () => {
           clearTimeout(timer);
           for (const l of m.getStyle().layers ?? []) {
-            if (l.type === "background") m.setPaintProperty(l.id, "background-color", "#eef0ec");
-            if (l.type === "fill" && /water/.test(l.id)) m.setPaintProperty(l.id, "fill-color", "#c6dde4");
+            if (l.type === "background") m.setPaintProperty(l.id, "background-color", "#faf8f5");
+            if (l.type === "fill") m.setPaintProperty(l.id, "fill-color", /water/.test(l.id) ? "#ddd9d3" : "#eee7de");
           }
           m.addSource("arcs", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
           m.addLayer({ id: "arc-halo", type: "line", source: "arcs", filter: ["!=", ["get", "state"], "standby"], layout: { "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": ["match", ["get", "state"], "accepted", 9, 7], "line-opacity": 0.9 } });
-          m.addLayer({ id: "arc", type: "line", source: "arcs", filter: ["!=", ["get", "state"], "standby"], layout: { "line-cap": "round" }, paint: { "line-color": ["match", ["get", "state"], "accepted", "#0e7c66", "#d9930d"], "line-width": ["match", ["get", "state"], "accepted", 4.5, 3] } });
-          m.addLayer({ id: "arc-backup", type: "line", source: "arcs", filter: ["==", ["get", "state"], "standby"], layout: { "line-cap": "round" }, paint: { "line-color": "#0e7c66", "line-width": 2.5, "line-dasharray": [0.5, 2.5], "line-opacity": 0.75 } });
+          m.addLayer({ id: "arc", type: "line", source: "arcs", filter: ["!=", ["get", "state"], "standby"], layout: { "line-cap": "round" }, paint: { "line-color": ["match", ["get", "state"], "accepted", "#8b4d35", "#d9930d"], "line-width": ["match", ["get", "state"], "accepted", 4.5, 3] } });
+          m.addLayer({ id: "arc-backup", type: "line", source: "arcs", filter: ["==", ["get", "state"], "standby"], layout: { "line-cap": "round" }, paint: { "line-color": "#8b4d35", "line-width": 2.5, "line-dasharray": [0.5, 2.5], "line-opacity": 0.75 } });
           setReady(true);
         });
       } catch (err) {

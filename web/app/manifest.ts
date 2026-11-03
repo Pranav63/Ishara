@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Sign language interpreters for any appointment in Dubai.",
     start_url: "/",
     display: "standalone",
-    background_color: "#eef0ec",
-    theme_color: "#0e7c66",
+    background_color: "#faf8f5",
+    theme_color: "#292622",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
   };
 }

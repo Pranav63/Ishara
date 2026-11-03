@@ -23,7 +23,7 @@ const line = (pts: Pt[]) => pts.map((p, i) => `${i ? "L" : "M"}${px(p)[0].toFixe
 const WATER = `M0,0 ${line(COAST).replace(/^M/, "L")} L${W},0 Z`;
 
 type State = "idle" | "pending" | "accepted" | "standby" | "out";
-const STROKE: Record<State, string> = { idle: "#9aa3a9", pending: "#d9930d", accepted: "#0e7c66", standby: "#0e7c66", out: "#c2413a" };
+const STROKE: Record<State, string> = { idle: "#a99b89", pending: "#d9930d", accepted: "var(--action)", standby: "var(--action)", out: "#c2413a" };
 
 function stateOf(id: string, offers: Offer[]): { state: State; offer?: Offer } {
   const o = offers.filter((x) => x.interpreter_id === id).pop();
@@ -61,17 +61,17 @@ export function DubaiMap({ places, interpreters, snap, now }: { places: Places; 
 
   return (
     <svg className="map" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of Dubai showing interpreters and the appointment">
-      <path d={WATER} fill="#cbe0e6" />
-      <path d={line(COAST)} fill="none" stroke="#b6d0d7" strokeWidth={2} />
-      <path d={line(CREEK)} fill="none" stroke="#cbe0e6" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" />
-      <text x={70} y={420} fontSize={18} fontStyle="italic" fill="#5f8792" letterSpacing="0.04em">Arabian Gulf</text>
+      <path d={WATER} fill="var(--surface-soft)" />
+      <path d={line(COAST)} fill="none" stroke="var(--line)" strokeWidth={2} />
+      <path d={line(CREEK)} fill="none" stroke="var(--surface-soft)" strokeWidth={11} strokeLinecap="round" strokeLinejoin="round" />
+      <text x={70} y={420} fontSize={18} fontStyle="italic" fill="var(--ink-2)" letterSpacing="0.04em">Arabian Gulf</text>
 
       {LANDMARKS.filter((n) => places[n] && !taken.some(([x, y]) => Math.hypot(x - px(places[n])[0], y - px(places[n])[1]) < 70)).map((n) => {
         const [x, y] = px(places[n]);
         return (
           <g key={n} aria-hidden>
-            <circle cx={x} cy={y} r={3} fill="#a9b1ab" />
-            <text x={x + 9} y={y + 6} fontSize={17} fill="#7d878a">{n}</text>
+            <circle cx={x} cy={y} r={3} fill="#a99b89" />
+            <text x={x + 9} y={y + 6} fontSize={17} fill="var(--ink-3)">{n}</text>
           </g>
         );
       })}
@@ -116,15 +116,15 @@ export function DubaiMap({ places, interpreters, snap, now }: { places: Places; 
             <m.circle
               className="pin"
               cx={p[0]} cy={p[1]} r={26}
-              fill={state === "accepted" ? "#0e7c66" : "#fff"}
-              stroke={state === "idle" ? "#c3cac6" : STROKE[state]}
+              fill={state === "accepted" ? "var(--action)" : "var(--surface)"}
+              stroke={state === "idle" ? "#c8bfb4" : STROKE[state]}
               strokeWidth={state === "idle" ? 1.5 : 2.5}
               strokeDasharray={state === "standby" ? "3 3" : undefined}
               animate={{ scale: state === "accepted" ? 1.12 : 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 22 }}
             />
-            <text x={p[0]} y={p[1] + 6} textAnchor="middle" fontSize={17} fontWeight={600} fill={state === "accepted" ? "#fff" : "#17202a"}>{initials(it.name)}</text>
-            <text x={p[0] > W - 260 ? p[0] - 36 : p[0] + 36} textAnchor={p[0] > W - 260 ? "end" : "start"} y={p[1] + 7} fontSize={19} fontWeight={600} fill="#17202a" stroke="#e7eae3" strokeWidth={4} paintOrder="stroke">
+            <text x={p[0]} y={p[1] + 6} textAnchor="middle" fontSize={17} fontWeight={600} fill={state === "accepted" ? "var(--on-action)" : "var(--ink)"}>{initials(it.name)}</text>
+            <text x={p[0] > W - 260 ? p[0] - 36 : p[0] + 36} textAnchor={p[0] > W - 260 ? "end" : "start"} y={p[1] + 7} fontSize={19} fontWeight={600} fill="var(--ink)" stroke="var(--bg)" strokeWidth={4} paintOrder="stroke">
               {it.name}
               {state === "standby" ? ", backup" : (state === "pending" || state === "accepted") && offer ? `, ${offer.travel_min} min away` : state === "out" ? (offer?.status === "cancelled" ? ", cancelled" : offer?.status === "declined" ? ", declined" : "") : ""}
             </text>
@@ -135,11 +135,11 @@ export function DubaiMap({ places, interpreters, snap, now }: { places: Places; 
       {venue && snap && (
         <g>
           {confirmed && (
-            <m.circle key={`ripple-${snap.assigned?.id}`} cx={venue[0]} cy={venue[1]} r={12} fill="none" stroke="#0e7c66" strokeWidth={2} initial={{ r: 12, opacity: 0.8 }} animate={{ r: 70, opacity: 0 }} transition={{ duration: 1.2, ease: "easeOut" }} />
+            <m.circle key={`ripple-${snap.assigned?.id}`} cx={venue[0]} cy={venue[1]} r={12} fill="none" stroke="var(--action)" strokeWidth={2} initial={{ r: 12, opacity: 0.8 }} animate={{ r: 70, opacity: 0 }} transition={{ duration: 1.2, ease: "easeOut" }} />
           )}
-          <circle cx={venue[0]} cy={venue[1]} r={14} fill="#17202a" />
-          <circle cx={venue[0]} cy={venue[1]} r={5} fill="#fff" />
-          <text x={venue[0]} y={venue[1] + 44} textAnchor="middle" fontSize={20} fontWeight={700} fill="#17202a" stroke="#e7eae3" strokeWidth={5} paintOrder="stroke">{snap.appointment.entity}</text>
+          <circle cx={venue[0]} cy={venue[1]} r={14} fill="var(--ink)" />
+          <circle cx={venue[0]} cy={venue[1]} r={5} fill="var(--bg)" />
+          <text x={venue[0]} y={venue[1] + 44} textAnchor="middle" fontSize={20} fontWeight={700} fill="var(--ink)" stroke="var(--bg)" strokeWidth={5} paintOrder="stroke">{snap.appointment.entity}</text>
         </g>
       )}
     </svg>
