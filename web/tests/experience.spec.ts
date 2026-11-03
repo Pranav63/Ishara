@@ -61,12 +61,13 @@ test("landing start action focuses the message and an example can be reviewed", 
   await page.goto("/");
   await page.getByRole("link", { name: "Start a request", exact: true }).click();
   await expect(page.getByLabel("Your appointment message")).toBeFocused();
+  await page.locator(".request-examples summary").click();
   await page.getByRole("button", { name: "Hospital", exact: true }).click();
   await expect(page.getByLabel("Your appointment message")).toHaveValue(/Rashid Hospital/);
   await page.locator(".optional-name summary").click();
   await page.getByLabel("Your name", { exact: true }).fill("Amal");
   const submitted = page.waitForRequest(r => r.method() === "POST" && new URL(r.url()).pathname === "/api/requests");
-  await page.getByRole("button", { name: "Review my appointment", exact: true }).click();
+  await page.getByRole("button", { name: "Review details", exact: true }).click();
   expect((await submitted).postDataJSON()).toMatchObject({ requester_name: "Amal", text: expect.stringContaining("Rashid Hospital") });
   await expect(page).toHaveURL(/\/r\/preview-token$/);
 });
@@ -82,4 +83,89 @@ test("Arabic landing reflows at 320px and help works with a keyboard", async ({ 
   await page.keyboard.press("Enter");
   await expect(page.locator(".resident-questions details").first()).toHaveAttribute("open", "");
   await expect(page.locator(".prototype-note")).toBeVisible();
+});
+
+test("new request shows the task, keeps extras collapsed, and Cancel preserves the draft", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await page.getByRole("button", { name: "New request", exact: true }).click();
+  const sheet = page.locator(".sheet");
+  await expect(sheet.getByRole("heading", { name: "New request", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("textbox")).toHaveCount(1);
+  await expect(sheet.locator(".agent-copy, .companion-choices")).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Hospital", exact: true })).toBeHidden();
+  await expect(sheet.getByLabel("Your name", { exact: true })).toBeHidden();
+  await expect(sheet.locator(".request-privacy p")).toBeHidden();
+  await expect(sheet.getByRole("button", { name: "Review details", exact: true })).toBeDisabled();
+  await expect(sheet.getByLabel("Your appointment message")).toBeFocused();
+  await sheet.getByLabel("Your appointment message").fill("My appointment draft");
+  await sheet.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(sheet.getByRole("heading", { name: "Test resident", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "New request", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "New request", exact: true }).click();
+  await expect(sheet.getByLabel("Your appointment message")).toHaveValue("My appointment draft");
+});
+
+test("resetting a collapsed conversation leaves the new request form editable", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await page.getByRole("button", { name: "Collapse conversation", exact: true }).click();
+  await page.route("**/api/requests/latest", route => route.fulfill({ json: null }));
+  await page.getByRole("button", { name: "Reset demo", exact: true }).click();
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(page.getByLabel("Your appointment message")).toBeVisible();
+});
+
+for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
+  test(`new request stays usable with enlarged text (${lang}, ${theme})`, async ({ page }) => {
+    await page.addInitScript(prefs => localStorage.setItem("ishara.prefs", JSON.stringify(prefs)), { lang, theme, size: 2 });
+    await page.setViewportSize({ width: 320, height: 1000 });
+    await page.goto("/");
+    await page.getByRole("button", { name: lang === "ar" ? "المنسق" : "Coordinator", exact: true }).click();
+    await page.getByRole("button", { name: lang === "ar" ? "طلب جديد" : "New request", exact: true }).click();
+    await page.getByLabel(lang === "ar" ? "رسالة موعدك" : "Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
+    const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة التفاصيل" : "Review details", exact: true });
+    await expect(review).toBeEnabled();
+    await review.scrollIntoViewIfNeeded();
+    const privacy = page.locator(".request-privacy summary");
+    await privacy.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".request-privacy p")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const rect = await review.boundingBox();
+    expect(rect!.width).toBeGreaterThanOrEqual(44);
+    expect(rect!.height).toBeGreaterThanOrEqual(44);
+    const settings = lang === "ar" ? "العرض وإمكانية الوصول" : "Display & accessibility";
+    await page.getByRole("button", { name: settings, exact: true }).click();
+    await expect(page.getByRole("dialog", { name: settings, exact: true })).toHaveCSS("opacity", "1");
+    const popup = await page.getByRole("dialog", { name: settings, exact: true }).boundingBox();
+    expect(popup!.x).toBeGreaterThanOrEqual(0);
+    expect(popup!.x + popup!.width).toBeLessThanOrEqual(320);
+  });
+}
+
+test("companion choice lives in display settings and text-first mode keeps entry simple", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 1000 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await page.getByRole("button", { name: "New request", exact: true }).click();
+  await page.getByRole("button", { name: "Display & accessibility", exact: true }).click();
+  const bounds = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await expect.poll(async () => {
+    const rect = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
+    return rect!.x >= 0 && rect!.x + rect!.width <= 390;
+  }).toBe(true);
+  await page.getByRole("button", { name: "Pearl", exact: true }).click();
+  await expect(page.locator(".sheet-head .companion-pearl")).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await page.getByRole("button", { name: "New request", exact: true }).click();
+  await expect(page.locator(".sheet-head .companion-pearl")).toBeVisible();
+  await page.getByRole("button", { name: "Display & accessibility", exact: true }).click();
+  await page.getByLabel("Text-first mode", { exact: true }).check();
+  await expect(page.locator(".sheet-head .companion-touch")).toHaveCount(0);
+  await expect(page.getByLabel("Your appointment message")).toBeVisible();
 });

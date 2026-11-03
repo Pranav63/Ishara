@@ -251,6 +251,33 @@ textarea:focus, input:focus { background: #fff; border-color: var(--accent); }
 .row.nowrap { flex-wrap: nowrap; }
 .error { color: var(--rose); font-size: 14px; }
 
+/* Focused request entry: optional information stays behind disclosure controls. */
+.sheet.is-composing { bottom: auto; max-height: calc(100dvh - var(--head-h) - 36px); }
+.sheet.is-composing .sheet-head { flex: none; padding: 24px 20px 16px; }
+.sheet.is-composing .sheet-head h2 { font-size: max(23px, 1.4rem); }
+.sheet.is-composing .sheet-head p { margin-top: 5px; font-size: max(14px, .875rem); line-height: 1.5; }
+.sheet.is-composing .sheet-body { overflow-y: auto; }
+.agent-companion.compact { display: block; width: 48px; padding: 0; background: none; border-radius: 0; }
+.sheet-head .agent-companion.compact { margin: 0; }
+.request-cancel { font: inherit; font-size: max(14px, .875rem); min-height: 44px; padding: 4px 6px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); cursor: pointer; }
+.sheet.is-composing .request-form { border: 0; padding: 0 20px 20px; gap: 12px; }
+.request-form textarea, .request-form input { font-size: 1rem; }
+.request-form textarea { min-height: 160px; background: var(--surface-soft); }
+.request-extras { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.request-extras > details { flex: 1 1 100px; min-width: 0; }
+.request-extras > details[open] { flex-basis: 100%; }
+.request-extras summary { min-height: 44px; align-content: center; font-size: max(14px, .875rem); color: var(--ink-2); cursor: pointer; border-radius: 6px; }
+.request-extras input { margin-top: 4px; }
+.request-examples .samples { padding-block: 4px 10px; }
+.request-form .request-continue { border-radius: 14px; gap: 10px; box-shadow: none; }
+.request-form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--ink-2); }
+.request-form-foot > p { flex: 1 1 140px; min-width: 0; font-size: max(13px, .8rem); line-height: 1.5; }
+.request-privacy { font-size: max(13px, .8rem); max-width: 100%; }
+.request-privacy[open] { flex-basis: 100%; }
+.request-privacy summary { display: flex; align-items: center; gap: 5px; min-height: 44px; cursor: pointer; border-radius: 6px; }
+.request-privacy p { line-height: 1.6; padding-block: 4px 8px; }
+[dir="rtl"] .request-continue svg { transform: scaleX(-1); }
+
 /* Offer dock: interpreter phones */
 .dock { position: fixed; z-index: 30; left: 428px; right: 12px; bottom: 16px; display: flex; justify-content: center; align-items: flex-end; gap: 12px; pointer-events: none; flex-wrap: wrap; }
 .dock > * { pointer-events: auto; }
@@ -393,7 +420,7 @@ select { width: 100%; font: inherit; font-size: 16px; min-height: 46px; padding:
 textarea, input { border-color: var(--line); }
 textarea:focus, input:focus { background: var(--surface-raised); }
 input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--action); flex: none; }
-button, input, textarea, select { scroll-margin-block: 110px 24px; }
+button, input, textarea, select { scroll-margin-block: calc(var(--head-h) + 24px) 24px; }
 .btn.small, .sample { min-height: 44px; }
 .display-controls { display: flex; align-items: center; gap: 5px; }
 .display-settings { display: grid; gap: 12px; text-align: start; }
@@ -471,15 +498,14 @@ button, input, textarea, select { scroll-margin-block: 110px 24px; }
 .agent-companion:is([data-state="parsing"],[data-state="dispatching"],[data-state="replanning"]) .companion-touch .pearl-orbit { animation: companion-orbit 1.6s linear 2; }
 .agent-companion:is([data-state="confirmed"],[data-state="completed"]) .companion-touch .companion-body { animation: companion-hop .8s ease-in-out 1; }
 .agent-companion[data-state="reviewing"] .companion-touch .companion-head { transform: rotate(-7deg); }
-.companion-picker { grid-column: 1 / -1; min-width: 0; border-top: 1px solid var(--line); padding-top: 2px; }
-.companion-picker summary { min-height: 44px; align-content: center; color: var(--ink-2); font-size: 12px; cursor: pointer; border-radius: 6px; }
+.companion-setting { min-width: 0; margin: 0; padding: 0; border: 0; }
+.companion-setting legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
 .companion-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-bottom: 8px; }
 .companion-choice { font: inherit; display: grid; justify-items: center; align-content: start; gap: 4px; padding: 8px 4px; min-height: 100px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink-2); cursor: pointer; }
 .companion-choice .companion-art { width: 60px; }
 .companion-choice span { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.5; }
 .companion-choice:hover { border-color: var(--ink-3); }
 .companion-choice[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.companion-hint { font-size: 12px; color: var(--ink-2); line-height: 1.5; padding-bottom: 4px; }
 .text-only .agent-companion { grid-template-columns: 1fr; }
 @keyframes companion-blink { 0%,75%,81%,100% { transform: scaleY(1); } 78% { transform: scaleY(.12); } }
 @keyframes companion-hop { 0%,100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-7px) rotate(-4deg); } 65% { transform: translateY(-3px) rotate(3deg); } }
@@ -528,9 +554,6 @@ html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover
 .resident-request .sheet-body { overflow: visible; }
 .resident-request .composer { border-top: 0; padding: 0 24px 20px; gap: 10px; }
 .resident-request textarea { min-height: 148px; background: var(--surface-soft); }
-.resident-request .sheet .agent-companion { margin: 0 16px 16px; }
-.optional-name summary { display: list-item; min-height: 44px; align-content: center; cursor: pointer; font-size: 14px; color: var(--ink-2); }
-.optional-name input { margin-top: 4px; }
 .prototype-note { font-size: 12px; line-height: 1.6; color: var(--ink-2); padding: 14px 12px 0; }
 .resident-help { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 64px; border-top: 1px solid var(--line); padding-top: 40px; }
 .resident-help h2 { font-size: 32px; letter-spacing: -.03em; margin-block: 12px; }

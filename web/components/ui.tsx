@@ -2,7 +2,7 @@
 
 import { AnimatePresence, m } from "motion/react";
 import { Info } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 // Icon button with a visible tooltip on hover and keyboard focus.
 export function IconButton({ label, onClick, children, badge, pressed, tone }: { label: string; onClick?: () => void; children: React.ReactNode; badge?: number; pressed?: boolean; tone?: "primary" }) {
@@ -19,6 +19,25 @@ export function Popover({ trigger, label, children, align = "start", wide }: { t
   const [open, setOpen] = useState(false);
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const element = panel;
+    if (!open || !element) return;
+    const fit = () => {
+      element.style.removeProperty("left");
+      element.style.removeProperty("right");
+      const bounds = element.getBoundingClientRect();
+      const shift = bounds.left < 12 ? 12 - bounds.left : bounds.right > window.innerWidth - 12 ? window.innerWidth - 12 - bounds.right : 0;
+      element.style.left = `${element.offsetLeft + shift}px`;
+      element.style.right = "auto";
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    if (ref.current?.parentElement) observer.observe(ref.current.parentElement);
+    window.addEventListener("resize", fit);
+    return () => { observer.disconnect(); window.removeEventListener("resize", fit); };
+  }, [open, panel]);
   useEffect(() => {
     if (!open) return;
     const key = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -37,7 +56,7 @@ export function Popover({ trigger, label, children, align = "start", wide }: { t
       </button>
       <AnimatePresence>
         {open && (
-          <m.div id={id} role="dialog" aria-label={label} className={`popover glass ${align}${wide ? " wide" : ""}`} initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.12 } }} transition={{ type: "spring", stiffness: 500, damping: 34 }}>
+          <m.div ref={setPanel} id={id} role="dialog" aria-label={label} className={`popover glass ${align}${wide ? " wide" : ""}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }} transition={{ type: "spring", stiffness: 500, damping: 34 }}>
             {typeof children === "function" ? children(() => setOpen(false)) : children}
             <PopoverClose onClose={() => setOpen(false)} />
           </m.div>

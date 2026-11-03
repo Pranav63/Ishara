@@ -4,6 +4,7 @@ import { MotionConfig } from "motion/react";
 import { Contrast, Languages, Settings2, Type } from "lucide-react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { Popover } from "@/components/ui";
+import { CompanionAvatar } from "@/components/CompanionAvatar";
 import { DEFAULTS, parsePrefs, type Prefs } from "@/lib/preferences";
 
 const Context = createContext({ prefs: DEFAULTS, update: (_: Partial<Prefs>) => {} });
@@ -54,6 +55,9 @@ export function DisplaySettings({ inline = false }: { inline?: boolean }) {
       <button className="chip" onClick={() => update({ size: ((prefs.size + 1) % 3) as Prefs["size"] })} aria-label={`${t("Text size", "حجم النص")}: ${[100, 115, 130][prefs.size]}%`}><Type size={17} aria-hidden />{["A", "A+", "A++"][prefs.size]}</button>
       <button className="chip" aria-pressed={prefs.contrast} onClick={() => update({ contrast: !prefs.contrast })}><Contrast size={17} aria-hidden />{t("High contrast", "تباين عالٍ")}</button>
     </div>
+    {!prefs.textOnly && <fieldset className="companion-setting"><legend>{t("Companion", "الرفيق")}</legend><div className="companion-choices" role="group" aria-label={t("Companion style", "شكل الرفيق")}>
+      {([["falcon", "Falcon", "صقر"], ["fox", "Desert fox", "ثعلب الصحراء"], ["pearl", "Pearl", "لؤلؤة"]] as const).map(([kind, en, ar]) => <button type="button" key={kind} className="companion-choice" aria-pressed={prefs.companion === kind} onClick={() => update({ companion: kind })}><CompanionAvatar kind={kind} /><span>{t(en, ar)}</span></button>)}
+    </div></fieldset>}
     <label className="setting-check"><input type="checkbox" checked={prefs.textOnly} onChange={(e) => update({ textOnly: e.target.checked })} />{t("Text-first mode", "وضع النص أولاً")}</label>
     <p className="small muted">{t("Keeps every update in text. Hides animation and video, with no flashing or vibration.", "يُبقي جميع التحديثات نصية ويخفي الحركة والفيديو، دون وميض أو اهتزاز.")}</p>
     <label className="setting-check"><input type="checkbox" checked={prefs.reducedMotion} onChange={(e) => update({ reducedMotion: e.target.checked })} />{t("Reduce motion", "تقليل الحركة")}</label>
