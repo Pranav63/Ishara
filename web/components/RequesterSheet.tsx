@@ -12,10 +12,9 @@ import { api } from "@/lib/api";
 import { SAMPLES, STATUS } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
 
-export function RequesterSheet({ snap, onCreated, composer = true }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean }) {
+export function RequesterSheet({ snap, onCreated, composer = true, compose = false, onComposeChange }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean; compose?: boolean; onComposeChange?: (compose: boolean) => void }) {
   const { t, lang } = useLanguage();
   const [min, setMin] = useState(false);
-  const [compose, setCompose] = useState(false);
   const [text, setText] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,14 +36,14 @@ export function RequesterSheet({ snap, onCreated, composer = true }: { snap: Sna
     e.preventDefault(); setBusy(true); setErr(null);
     try {
       const created = await api.create(text.trim(), name.trim());
-      setText(""); setCompose(false); onCreated(created);
+      setText(""); onCreated(created);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
   return <m.section className={`sheet glass strong${min && !showForm ? " min" : ""}${showForm ? " is-composing" : ""}`} aria-label={t("Request an interpreter", "اطلب مترجماً")} layout transition={{ type: "spring", stiffness: 400, damping: 38 }}>
     <div className="sheet-head">
       <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Your space", "مساحتك")}</p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Request an interpreter", "اطلب مترجماً")}</h2>{showForm && <p id="msg-help">{t("Paste your appointment message.", "ألصق رسالة موعدك.")}</p>}</div>
       {showForm && <AgentCompanion compact busy={busy} />}
-      {compose && <button type="button" className="request-cancel" onClick={() => { restoreFocus.current = true; setCompose(false); setErr(null); }}>{t("Cancel", "إلغاء")}</button>}
+      {compose && <button type="button" className="request-cancel" onClick={() => { restoreFocus.current = true; onComposeChange?.(false); setErr(null); }}>{t("Cancel", "إلغاء")}</button>}
       {snap && !showForm && <button className="icon-btn" aria-label={min ? t("Expand conversation", "توسيع المحادثة") : t("Collapse conversation", "طي المحادثة")} aria-expanded={!min} onClick={() => setMin((v) => !v)}><m.span animate={{ rotate: min ? 180 : 0 }} style={{ display: "inline-flex" }}><ChevronDown size={18} aria-hidden /></m.span></button>}
     </div>
     <AnimatePresence initial={false}>{(!min || showForm) && <m.div className="sheet-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -55,7 +54,7 @@ export function RequesterSheet({ snap, onCreated, composer = true }: { snap: Sna
         <div className="appt-row"><span className={`state ${st.tone}`}>{lang === "ar" ? statusAr[snap.status] : st.label}</span></div>
       </div>}
       {snap?.status === "reviewing" && !showForm ? <div className="review-scroll"><ReviewAppointment key={snap.id} snap={snap} onDone={() => onCreated()} /></div> : snap && !showForm ? <Thread snap={snap} /> : null}
-      {snap && composer && !compose && <div className="compose-bar"><Link className="btn small" href={`/r/${snap.token}`}><ArrowUpRight size={16} aria-hidden />{t("My appointment", "موعدي")}</Link><button ref={newRequestButton} className="btn small" onClick={() => { setCompose(true); setErr(null); }}><Plus size={16} aria-hidden />{t("New request", "طلب جديد")}</button></div>}
+      {snap && composer && !compose && <div className="compose-bar"><Link className="btn small" href={`/r/${snap.token}`}><ArrowUpRight size={16} aria-hidden />{t("My appointment", "موعدي")}</Link><button ref={newRequestButton} className="btn small" onClick={() => { onComposeChange?.(true); setErr(null); }}><Plus size={16} aria-hidden />{t("New request", "طلب جديد")}</button></div>}
       {showForm && <form className="composer request-form" onSubmit={submit} aria-busy={busy}>
         <label className="sr-only" htmlFor="msg">{t("Your appointment message", "رسالة موعدك")}</label>
         <textarea ref={messageField} id="msg" name="message" autoComplete="off" aria-describedby="msg-help" dir="auto" rows={5} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Place, date and time…", "المكان، والتاريخ، والوقت…")} />

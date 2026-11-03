@@ -86,9 +86,14 @@ test("Arabic landing reflows at 320px and help works with a keyboard", async ({ 
 });
 
 test("new request shows the task, keeps extras collapsed, and Cancel preserves the draft", async ({ page }) => {
+  await page.route("**/api/places", route => route.fulfill({ json: { "Oud Metha": [25.24, 55.31] } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Done");
+  await expect(page.locator(".map-full").getByText("Rashid Hospital", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "New request", exact: true }).click();
+  await expect(page.locator(".progress")).toBeHidden();
+  await expect(page.locator(".map-full").getByText("Rashid Hospital", { exact: true })).toBeHidden();
   const sheet = page.locator(".sheet");
   await expect(sheet.getByRole("heading", { name: "New request", exact: true })).toBeVisible();
   await expect(sheet.getByRole("textbox")).toHaveCount(1);
@@ -101,9 +106,29 @@ test("new request shows the task, keeps extras collapsed, and Cancel preserves t
   await sheet.getByLabel("Your appointment message").fill("My appointment draft");
   await sheet.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(sheet.getByRole("heading", { name: "Test resident", exact: true })).toBeVisible();
+  await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Done");
+  await expect(page.locator(".map-full").getByText("Rashid Hospital", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "New request", exact: true })).toBeFocused();
   await page.getByRole("button", { name: "New request", exact: true }).click();
   await expect(sheet.getByLabel("Your appointment message")).toHaveValue("My appointment draft");
+});
+
+test("a new submission uses its own status while the latest snapshot catches up", async ({ page }) => {
+  const created = { ...request, id: "new-request", token: "new-token", requester_name: "New resident", status: "reviewing" };
+  let latest = request;
+  await page.route("**/api/requests/latest", route => route.fulfill({ json: latest }));
+  await page.route("**/api/requests", route => route.fulfill({ json: created }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Coordinator", exact: true }).click();
+  await page.getByRole("button", { name: "New request", exact: true }).click();
+  await page.getByLabel("Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
+  const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/requests/latest");
+  await page.getByRole("button", { name: "Review details", exact: true }).click();
+  await refreshed;
+  await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Review");
+  await expect(page.getByRole("heading", { name: "New resident", exact: true })).toBeVisible();
+  latest = { ...created, status: "dispatching" };
+  await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Matching", { timeout: 8000 });
 });
 
 test("resetting a collapsed conversation leaves the new request form editable", async ({ page }) => {
