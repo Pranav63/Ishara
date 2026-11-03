@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
   description: "Finds a sign language interpreter for any appointment in Dubai, and replaces them if they cancel.",
 };
-export const viewport: Viewport = { themeColor: "#faf8f5", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#f7f7f5", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
