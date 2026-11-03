@@ -46,18 +46,22 @@ export function LiveMap({ places, interpreters, snap, now, padding }: { places: 
 
   // Init once. Fall back to the offline SVG map if WebGL or the tile server is unavailable.
   useEffect(() => {
+    if (failed) return;
     let dead = false;
+    let loaded = false;
     let timer: ReturnType<typeof setTimeout>;
     (async () => {
       try {
         const ml = await import("maplibre-gl");
         if (dead || !box.current) return;
+        ml.setWorkerUrl(new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString());
         const m = new ml.Map({ container: box.current, style: STYLE, center: DUBAI, zoom: 10.4, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false });
         map.current = m;
         m.addControl(new ml.NavigationControl({ showCompass: false }), "bottom-right");
         timer = setTimeout(() => !m.loaded() && setFailed(true), 12000);
-        m.on("error", (e) => { if (!m.isStyleLoaded()) setFailed(true); console.warn("map", e.error?.message); });
+        m.on("error", (e) => { if (!dead && !loaded) setFailed(true); console.warn("map", e.error?.message); });
         m.on("load", () => {
+          loaded = true;
           clearTimeout(timer);
           for (const l of m.getStyle().layers ?? []) {
             if (l.type === "background") m.setPaintProperty(l.id, "background-color", "#faf8f5");
@@ -71,7 +75,7 @@ export function LiveMap({ places, interpreters, snap, now, padding }: { places: 
         });
       } catch (err) {
         console.warn("map unavailable", err);
-        setFailed(true);
+        if (!dead) setFailed(true);
       }
     })();
     return () => {
@@ -81,7 +85,7 @@ export function LiveMap({ places, interpreters, snap, now, padding }: { places: 
       map.current?.remove();
       map.current = null;
     };
-  }, []);
+  }, [failed]);
 
   // Sync markers and arcs with the dispatch snapshot.
   useEffect(() => {
@@ -177,5 +181,5 @@ export function LiveMap({ places, interpreters, snap, now, padding }: { places: 
 
   if (failed) return <div className="map-full"><DubaiMap places={places} interpreters={interpreters} snap={snap} now={now} /></div>;
   // Inline position wins over maplibre-gl.css, which would otherwise collapse the container to zero height.
-  return <div ref={box} className="map-full" style={{ position: "absolute", inset: 0 }} role="region" aria-label={t("Map of Dubai with interpreters and the appointment", "خريطة دبي مع المترجمين والموعد")} />;
+  return <div ref={box} className="map-full" style={{ position: "absolute", inset: 0 }} role="region" aria-busy={!ready} aria-label={t("Map of Dubai with interpreters and the appointment", "خريطة دبي مع المترجمين والموعد")} />;
 }

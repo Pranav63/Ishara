@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+// Exercise MapLibre workers with software WebGL on headless CI machines.
+test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] } });
+
 const request = {
   id: "layout-test", token: "preview-token", now: 1793700000, created_at: 1793700000,
   status: "completed", requester_name: "Test resident", message: "An appointment message.",
@@ -291,4 +294,41 @@ test("coordinator sign in retains validation and sign out from the grouped menu"
   await expect(page.locator(".resident-intro")).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
   expect(authenticated).toBe(false);
+});
+
+test.describe("bundled map worker", () => {
+  test.beforeEach(async ({ page }) => {
+    // A local GeoJSON basemap exercises the actual worker without a tile-service dependency.
+    await page.route("https://tiles.openfreemap.org/styles/positron", route => route.fulfill({ json: {
+      version: 8,
+      sources: { land: { type: "geojson", data: { type: "Feature", properties: {}, geometry: {
+        type: "Polygon", coordinates: [[[55, 25], [55.5, 25], [55.5, 25.4], [55, 25.4], [55, 25]]],
+      } } } },
+      layers: [{ id: "background", type: "background", paint: { "background-color": "#faf8f5" } },
+        { id: "land", type: "fill", source: "land", paint: { "fill-color": "#eee7de" } }],
+    } }));
+  });
+
+  test("renders a GeoJSON basemap using the emitted worker", async ({ page }) => {
+    const workerErrors: string[] = [];
+    const workers: number[] = [];
+    page.on("console", message => { if (/worker failed to load/i.test(message.text())) workerErrors.push(message.text()); });
+    page.on("response", response => { if (/\.mjs(?:\?|$)/.test(response.url())) workers.push(response.status()); });
+    await page.goto("/");
+    await coordinatorView(page);
+    const map = page.getByRole("region", { name: "Map of Dubai with interpreters and the appointment" });
+    await expect(map).toHaveAttribute("aria-busy", "false", { timeout: 10000 });
+    await expect(map.locator("canvas")).toBeVisible();
+    expect(workers).toContain(200);
+    expect(workers.every(status => status === 200)).toBe(true);
+    expect(workerErrors).toEqual([]);
+  });
+
+  test("shows the offline map when the worker cannot load", async ({ page }) => {
+    await page.route(/\.mjs(?:\?|$)/, route => route.abort());
+    await page.goto("/");
+    await coordinatorView(page);
+    await expect(page.getByRole("img", { name: "Map of Dubai showing interpreters and the appointment", exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
+  });
 });
