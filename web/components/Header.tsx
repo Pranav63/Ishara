@@ -3,6 +3,7 @@
 import { m } from "motion/react";
 import { Hand } from "lucide-react";
 import Link from "next/link";
+import { useLayoutEffect, useRef } from "react";
 import { useLanguage } from "@/components/Preferences";
 import { stepOf } from "@/lib/state";
 import type { Status } from "@/lib/types";
@@ -29,17 +30,30 @@ export function Progress({ status }: { status?: Status }) {
   );
 }
 
-export function Header({ status, children }: { status?: Status; children: React.ReactNode }) {
+export function Header({ status, connection, children }: { status?: Status; connection?: React.ReactNode; children: React.ReactNode }) {
   const { t } = useLanguage();
+  const ref = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const header = ref.current;
+    if (!header) return;
+    const root = document.documentElement;
+    const measure = () => root.style.setProperty("--head-h", `${Math.ceil(header.getBoundingClientRect().height)}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => { observer.disconnect(); root.style.removeProperty("--head-h"); };
+  }, []);
   return (
-    <header className="header glass">
-      <Link href="/" className="brand" aria-label={t("Ishara home", "إشارة، الرئيسية")}>
-        <span className="mark" aria-hidden><Hand size={18} strokeWidth={2.2} /></span>
-        <span className="brand-name" translate="no">Ishara</span>
-        <span className="brand-ar" lang="ar" aria-hidden>إشارة</span>
-      </Link>
-      <div className="header-center">{status && <Progress status={status} />}</div>
-      <div className="header-actions">{children}</div>
+    <header ref={ref} className="header glass">
+      <div className="header-main">
+        <Link href="/" className="brand" aria-label={t("Ishara home", "إشارة، الرئيسية")}>
+          <span className="mark" aria-hidden><Hand size={18} strokeWidth={2.2} /></span>
+          <span className="brand-name" translate="no">Ishara</span>
+          <span className="brand-ar" lang="ar" aria-hidden>إشارة</span>
+        </Link>
+        <div className="header-actions">{children}</div>
+      </div>
+      {(status || connection) && <div className="header-status">{status && <Progress status={status} />}{connection}</div>}
     </header>
   );
 }
