@@ -148,11 +148,30 @@ test("welcome animation respects motion and text-first preferences", async ({ pa
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await expect(page.locator(".welcome-ink")).toHaveCSS("animation-name", "welcome-connect");
+  await page.evaluate(() => document.fonts.ready);
+  const guide = page.locator(".welcome-guide");
+  const initialBounds = await guide.boundingBox();
+  const delays = await page.locator(".welcome-step").evaluateAll(steps => steps.map(step => parseFloat(getComputedStyle(step).animationDelay)));
+  expect(delays).toHaveLength(3);
+  expect(delays[0]).toBeLessThan(delays[1]);
+  expect(delays[1]).toBeLessThan(delays[2]);
+  await guide.evaluate(element => element.getAnimations({ subtree: true }).forEach(animation => animation.finish()));
+  expect(await guide.boundingBox()).toEqual(initialBounds);
+  for (const step of await page.locator(".welcome-step").all()) {
+    await expect(step).toHaveCSS("opacity", "1");
+    await expect(step).toHaveCSS("transform", /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/);
+    await expect(step).toHaveCSS("animation-iteration-count", "1");
+  }
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator(".welcome-step").first()).toHaveCSS("animation-name", "none");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await openSettings(page);
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");
   await page.getByLabel("Reduce motion", { exact: true }).check();
   await expect(page.locator(".welcome-ink")).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".welcome-step").first()).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".resident-flow li").first()).toHaveCSS("animation-name", "none");
   await page.getByLabel("Text-first mode", { exact: true }).check();
   await expect(page.locator(".welcome-art")).toBeHidden();
 });

@@ -606,13 +606,19 @@ html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover
 .welcome-track, .welcome-ink { fill: none; stroke: var(--line); stroke-width: 1; }
 .welcome-ink { stroke: var(--accent); stroke-width: 1.5; }
 .welcome-tile { fill: var(--surface); stroke: var(--line); }
-.welcome-mark { transform-origin: 180px 40px; }
 @media (prefers-reduced-motion: no-preference) {
-  .welcome-ink { stroke-dasharray: 1; animation: welcome-connect 1.8s .15s both; }
-  .welcome-mark { animation: welcome-greet 1.8s .15s both; }
+  .welcome-ink { stroke-dasharray: 1; animation: welcome-connect 1.25s var(--ease) .24s both; }
+  .welcome-step, .resident-flow li { animation: welcome-arrive .65s var(--ease) both; }
+  .welcome-step:nth-of-type(1), .resident-flow li:nth-child(1) { animation-delay: .08s; }
+  .welcome-step:nth-of-type(2), .resident-flow li:nth-child(2) { animation-delay: .32s; }
+  .welcome-step:nth-of-type(3), .resident-flow li:nth-child(3) { animation-delay: .56s; }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .welcome-symbol { transition: transform .24s var(--ease); }
+  html:not(.reduce-motion) .welcome-step:hover .welcome-symbol { transform: translateY(-2px); }
 }
 @keyframes welcome-connect { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-@keyframes welcome-greet { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-6px) rotate(-4deg); } }
+@keyframes welcome-arrive { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .text-only .welcome-art { display: none; }
 .resident-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .resident-flow li { min-width: 0; text-align: center; color: var(--ink-2); font-size: max(14px, .875rem); font-weight: 500; }
