@@ -608,9 +608,10 @@ html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover
 @keyframes welcome-greet { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-6px) rotate(-4deg); } }
 html.reduce-motion .welcome-art:hover .welcome-mark { transform: none; }
 .text-only .welcome-art { display: none; }
-.resident-flow { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px 24px; }
-.resident-flow li { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: max(13px, .8rem); }
-.resident-flow li > span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 50%; font-size: .85em; }
+.resident-flow { list-style: none; margin: 0; padding: 0; width: min(100%, 360px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.resident-flow li { position: relative; min-width: 0; display: grid; align-content: start; justify-items: start; gap: 8px; color: var(--ink-2); font-size: max(14px, .875rem); font-weight: 500; }
+.resident-flow li:not(:last-child)::after { content: ""; position: absolute; top: 16px; inset-inline-start: 40px; inset-inline-end: 0; border-top: 1px solid var(--line); }
+.resident-flow li > span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-soft); color: var(--accent); font-size: max(13px, .8rem); font-weight: 600; }
 .resident-request { min-width: 0; }
 .resident-request .sheet { position: relative; inset: auto; width: 100%; margin: 0; max-height: none; background: var(--surface); }
 .resident-request .sheet-head { padding: 24px 24px 18px; }
@@ -646,7 +647,6 @@ html.reduce-motion .welcome-art:hover .welcome-mark { transform: none; }
   .resident-grid { max-width: 640px; grid-template-columns: 1fr; grid-template-rows: auto auto auto; align-content: center; padding-top: 20px; gap: 20px; }
   .resident-intro { gap: 12px; }
   .welcome-art { display: none; }
-  .resident-flow { gap: 12px 20px; }
   .resident-intro h1 { font-size: clamp(32px, 6vw, 40px); }
   .resident-intro, .resident-request { grid-column: 1; grid-row: auto; }
   .console-view .canvas { height: 34vh; min-height: 220px; }
