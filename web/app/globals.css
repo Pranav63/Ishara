@@ -256,12 +256,19 @@ textarea:focus, input:focus { background: #fff; border-color: var(--accent); }
 .sheet.is-composing .request-form { border: 0; padding: 0 20px 20px; gap: 12px; }
 .request-form textarea, .request-form input { font-size: 1rem; }
 .request-form textarea { min-height: 160px; background: var(--surface-soft); }
-.request-extras { display: flex; flex-wrap: wrap; gap: 4px 16px; }
-.request-extras > details { flex: 1 1 100px; min-width: 0; }
+.request-extras { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+.request-extras > details { flex: 1 1 130px; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .request-extras > details[open] { flex-basis: 100%; }
-.request-extras summary { min-height: 44px; align-content: center; font-size: max(14px, .875rem); color: var(--ink-2); cursor: pointer; border-radius: 6px; }
-.request-extras input { margin-top: 4px; }
-.request-examples .samples { padding-block: 4px 10px; }
+.request-extras summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 10px; list-style: none; font-size: max(14px, .875rem); line-height: 1.5; color: var(--ink-2); cursor: pointer; border-radius: 9px; }
+.request-extras summary::-webkit-details-marker { display: none; }
+.request-extras .optional-hint { font-size: max(12px, .75rem); color: var(--ink-3); }
+.request-extras summary:hover { background: var(--fill); }
+.request-extras summary svg { flex: none; color: var(--ink-3); transition: transform .2s var(--ease); }
+.request-extras > details[open] > summary { border-bottom: 1px solid var(--line); border-radius: 9px 9px 0 0; }
+.request-extras > details[open] > summary svg { transform: rotate(180deg); }
+.request-extra-body { padding: 12px; }
+.request-extras input { margin: 0; background: var(--surface); }
+.request-examples .sample { flex: 1 1 auto; white-space: normal; padding: 8px 12px; }
 .request-form .request-continue { border-radius: var(--r-md); gap: 10px; box-shadow: none; }
 .request-form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--ink-2); }
 .request-form-foot > p { flex: 1 1 140px; min-width: 0; font-size: max(13px, .8rem); line-height: 1.5; }

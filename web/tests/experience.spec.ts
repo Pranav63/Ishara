@@ -85,6 +85,8 @@ test("landing starts with the message form and an example can be reviewed", asyn
   await expect(page.getByLabel("Your appointment message")).toBeFocused();
   await page.locator(".request-examples summary").click();
   await page.getByRole("button", { name: "Hospital", exact: true }).click();
+  await expect(page.locator(".request-examples")).not.toHaveAttribute("open", "");
+  await expect(page.getByLabel("Your appointment message")).toBeFocused();
   await expect(page.getByLabel("Your appointment message")).toHaveValue(/Rashid Hospital/);
   await page.locator(".optional-name summary").click();
   await page.getByLabel("Your name", { exact: true }).fill("Amal");
@@ -451,3 +453,29 @@ test("support acknowledgment retains a failed draft and shows the saved server u
   await expect(row.locator(".support-response")).not.toContainText("050 123 4567");
   expect(attempts).toBe(2);
 });
+
+
+for (const lang of ["en", "ar"]) {
+  test(`request options open with a keyboard and retain the optional name (${lang})`, async ({ page }) => {
+    await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, size: 2, theme: "dark" })), lang);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto("/");
+    const name = page.locator(".optional-name");
+    const examples = page.locator(".request-examples");
+    await expect(name.locator("summary")).toHaveCSS("list-style-type", "none");
+    await expect(examples.locator("summary")).toHaveCSS("list-style-type", "none");
+    await name.locator("summary").focus();
+    await page.keyboard.press("Enter");
+    await page.getByLabel(lang === "ar" ? "اسمك" : "Your name", { exact: true }).fill("Amal");
+    await examples.locator("summary").focus();
+    await page.keyboard.press("Enter");
+    await expect(name).not.toHaveAttribute("open", "");
+    await expect(examples).toHaveAttribute("open", "");
+    await page.getByRole("button", { name: lang === "ar" ? "مستشفى" : "Hospital", exact: true }).click();
+    await expect(examples).not.toHaveAttribute("open", "");
+    await expect(page.getByLabel(lang === "ar" ? "رسالة موعدك" : "Your appointment message")).toBeFocused();
+    await name.locator("summary").click();
+    await expect(page.getByLabel(lang === "ar" ? "اسمك" : "Your name", { exact: true })).toHaveValue("Amal");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
