@@ -9,6 +9,15 @@ export const clock = (ts: number) => hm.format(ts * 1000);
 export const clockSec = (ts: number) => hms.format(ts * 1000);
 export const when = (ts: number) => `${day.format(ts * 1000)} at ${hm.format(ts * 1000)}`;
 
+export function duration(seconds: number, lang: "en" | "ar") {
+  const unit = (value: number, name: string) => new Intl.NumberFormat(lang === "ar" ? "ar-AE" : "en-GB", { style: "unit", unit: name, unitDisplay: "short" }).format(value);
+  if (Math.round(seconds) < 60) return unit(Math.round(seconds), "second");
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return unit(minutes, "minute");
+  const hours = unit(Math.floor(minutes / 60), "hour");
+  return minutes % 60 ? `${hours} ${unit(minutes % 60, "minute")}` : hours;
+}
+
 export const initials = (name: string) =>
   name
     .split(" ")

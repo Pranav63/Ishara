@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import type { Escalation } from "../lib/api";
 
 // Exercise MapLibre workers with software WebGL on headless CI machines.
 test.use({ launchOptions: { args: ["--enable-unsafe-swiftshader"] } });
@@ -373,4 +374,80 @@ test.describe("bundled map worker", () => {
     await expect(page.getByRole("img", { name: "Map of Dubai showing interpreters and the appointment", exact: true })).toBeVisible({ timeout: 5000 });
     await expect(page.locator(".maplibregl-canvas")).toHaveCount(0);
   });
+});
+
+
+const supportQueue: Escalation[] = [
+  { request_id: "R-842989A01853", requester_name: "Layla", status: "pending", created_at: 1793700000, acknowledged_at: null, note: null },
+  { request_id: "R-3C646426D2C4", requester_name: "", status: "pending", created_at: 1793700100, acknowledged_at: null, note: null },
+];
+
+for (const lang of ["en", "ar"]) {
+  test(`support list stays compact with enlarged text (${lang})`, async ({ page }) => {
+    await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, theme: "dark", size: 2 })), lang);
+    await page.route("**/api/escalations", route => route.fulfill({ json: supportQueue }));
+    await page.route("**/api/metrics", route => route.fulfill({ json: { requests: 3, filled: 1, median_confirm_s: 12681.1, replans: 0 } }));
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto("/");
+    await coordinatorView(page, lang);
+    await openMenu(page, lang);
+    await page.getByRole("button", { name: lang === "ar" ? "النشاط والدعم" : "Activity & support", exact: true }).click();
+    const drawer = page.locator(".drawer");
+    await expect(drawer.locator(".support-request")).toHaveCount(2);
+    await expect(drawer.getByRole("textbox")).toHaveCount(0);
+    const first = drawer.locator(".support-request > summary").first();
+    await first.focus();
+    await page.keyboard.press("Enter");
+    await expect(drawer.getByRole("textbox")).toHaveCount(1);
+    await drawer.locator(".support-request > summary").nth(1).click();
+    await expect(drawer.getByRole("textbox")).toHaveCount(1);
+    await expect(drawer.locator(".support-request").first()).not.toHaveAttribute("open", "");
+    await drawer.locator(".activity-disclosure > summary").last().click();
+    await expect(drawer.locator(".activity-metrics")).toBeVisible();
+    await expect(drawer.locator(".activity-metrics")).not.toContainText("12681");
+    expect(await drawer.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(await drawer.locator(".activity").evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+    await expect(page.getByRole("button", { name: lang === "ar" ? "القائمة" : "Menu", exact: true })).toBeFocused();
+  });
+}
+
+test("support acknowledgment retains a failed draft and shows the saved server update", async ({ page }) => {
+  let queue = supportQueue.map(item => ({ ...item }));
+  let attempts = 0;
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/escalations", route => route.fulfill({ json: queue }));
+  await page.route("**/api/escalations/*/acknowledge", async route => {
+    attempts++;
+    expect(route.request().postDataJSON()).toEqual({ note: "Checking remote support. Call 050 123 4567." });
+    if (attempts === 1) { await pending; return route.fulfill({ status: 503, json: { detail: "Please try again." } }); }
+    queue = queue.map((item, index) => index ? item : { ...item, status: "acknowledged" as const, note: "Checking remote support. Call [redacted].", acknowledged_at: 1793700200 });
+    return route.fulfill({ json: queue[0] });
+  });
+  await page.goto("/");
+  await coordinatorView(page);
+  await openMenu(page);
+  await page.getByRole("button", { name: "Activity & support", exact: true }).click();
+  const row = page.locator(".support-request").first();
+  await row.locator("summary").click();
+  await row.getByRole("textbox").fill("Checking remote support. Call 050 123 4567.");
+  await row.getByRole("button", { name: "Acknowledge", exact: true }).click();
+  const saving = row.getByRole("button", { name: "Saving…", exact: true });
+  await expect(saving).toHaveAttribute("aria-disabled", "true");
+  await expect.poll(() => attempts).toBe(1);
+  await saving.click({ force: true });
+  expect(attempts).toBe(1);
+  release();
+  await expect(row.getByRole("alert")).toHaveText("Please try again.");
+  await expect(row.getByRole("button", { name: "Acknowledge", exact: true })).toBeFocused();
+  await expect(row.getByRole("textbox")).toHaveValue("Checking remote support. Call 050 123 4567.");
+  await row.getByRole("button", { name: "Acknowledge", exact: true }).click();
+  await expect(row.getByRole("textbox")).toHaveCount(0);
+  await expect(row.locator("summary")).toBeFocused();
+  await expect(row.locator(".support-status")).toHaveText("Acknowledged");
+  await expect(row.locator(".support-response")).toContainText("Call [redacted]");
+  await expect(row.locator(".support-response")).not.toContainText("050 123 4567");
+  expect(attempts).toBe(2);
 });

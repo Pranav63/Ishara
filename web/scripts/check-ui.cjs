@@ -37,6 +37,12 @@ assert.equal(stepOf('dispatching'), 1);
 assert.equal(stepOf('replanning'), 1);
 assert.equal(stepOf('confirmed'), 2);
 assert.equal(stepOf('completed'), 3);
+const { duration } = load('format.ts');
+assert.match(duration(0, 'en'), /^0 /);
+assert.match(duration(59.6, 'en'), /^1 min/);
+assert.match(duration(3599, 'en'), /^1 hr/);
+assert.match(duration(12681.1, 'en'), /3.*hr.*31.*min/);
+assert.match(duration(12681.1, 'ar'), /س.*د/);
 console.log('UI self-checks passed: saved preference validation, Dubai date conversion, and review/matching progress.');
 
 // Exercise async ownership with hook stubs, without adding a browser-test dependency.
