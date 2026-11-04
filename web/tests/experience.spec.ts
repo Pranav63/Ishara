@@ -91,7 +91,7 @@ test("landing starts with the message form and an example can be reviewed", asyn
   await page.locator(".optional-name summary").click();
   await page.getByLabel("Your name", { exact: true }).fill("Amal");
   const submitted = page.waitForRequest(r => r.method() === "POST" && new URL(r.url()).pathname === "/api/requests");
-  await page.getByRole("button", { name: "Review details", exact: true }).click();
+  await page.getByRole("button", { name: "Review appointment", exact: true }).click();
   expect((await submitted).postDataJSON()).toMatchObject({ requester_name: "Amal", text: expect.stringContaining("Rashid Hospital") });
   await expect(page).toHaveURL(/\/r\/preview-token$/);
 });
@@ -121,7 +121,7 @@ for (const lang of ["en", "ar"]) {
     for (const [width, height] of [[390, 844], [1280, 720], [1440, 900]]) {
       await page.setViewportSize({ width, height });
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-      await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة التفاصيل" : "Review details", exact: true })).toBeInViewport();
+      await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true })).toBeInViewport();
       if (width > 560) {
         const alignment = await page.locator(".welcome-guide").evaluate(guide => {
           const icons = [...guide.querySelectorAll(".welcome-tile")].map(icon => icon.getBoundingClientRect());
@@ -134,13 +134,53 @@ for (const lang of ["en", "ar"]) {
   });
 }
 
-test("service warning shares the desktop viewport with the request form", async ({ page }) => {
-  await page.route("**/api/config", route => route.fulfill({ status: 503, json: { detail: "Unavailable" } }));
-  await page.setViewportSize({ width: 1280, height: 900 });
+for (const lang of ["en", "ar"]) {
+  test(`offline form stays compact and preserves the message on recovery (${lang})`, async ({ page }) => {
+    await page.clock.install();
+    await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, theme: "dark" })), lang);
+    let available = false;
+    let submissions = 0;
+    page.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname === "/api/requests") submissions++; });
+    await page.route("**/api/config", route => route.fulfill(available
+      ? { json: { demo: true, operator_auth_required: false } }
+      : { status: 503, json: { detail: "Unavailable" } }));
+    await page.goto("/");
+    const button = page.getByRole("button", { name: lang === "ar" ? "الخدمة غير متاحة" : "Service unavailable", exact: true });
+    const message = page.locator("#msg");
+    await expect(button).toBeDisabled();
+    await message.fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
+    await page.locator(".request-form").evaluate(form => (form as HTMLFormElement).requestSubmit());
+    await expect(page.locator("#request-service")).toHaveText(lang === "ar" ? "يمكنك تجهيز الرسالة. الإرسال غير متاح حالياً." : "You can prepare a message. Sending is unavailable.");
+    for (const [width, height] of [[390, 844], [1280, 720]]) {
+      await page.setViewportSize({ width, height });
+      await expect(button).toBeInViewport();
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    expect(submissions).toBe(0);
+    available = true;
+    await page.clock.fastForward(15000);
+    await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true })).toBeEnabled();
+    await expect(message).toHaveValue("Appointment at Rashid Hospital, 12 November at 10:30 AM");
+    expect(submissions).toBe(0);
+  });
+}
+
+test("form waits for the initial service check before allowing submission", async ({ page }) => {
+  let release!: () => void;
+  const checked = new Promise<void>(resolve => { release = resolve; });
+  let submissions = 0;
+  page.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname === "/api/requests") submissions++; });
+  await page.route("**/api/config", async route => {
+    await checked;
+    await route.fulfill({ json: { demo: true, operator_auth_required: false } });
+  });
   await page.goto("/");
-  await expect(page.locator(".banner[role=alert]")).toHaveText(/service is unavailable/);
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-  await expect(page.getByLabel("Your appointment message")).toBeInViewport();
+  await page.locator("#msg").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
+  await expect(page.getByRole("button", { name: "Checking service…", exact: true })).toBeDisabled();
+  await page.locator(".request-form").evaluate(form => (form as HTMLFormElement).requestSubmit());
+  release();
+  await expect(page.getByRole("button", { name: "Review appointment", exact: true })).toBeEnabled();
+  expect(submissions).toBe(0);
 });
 
 test("welcome animation respects motion and text-first preferences", async ({ page }) => {
@@ -192,7 +232,7 @@ test("new request shows the task, keeps extras collapsed, and Cancel preserves t
   await expect(sheet.getByRole("button", { name: "Hospital", exact: true })).toBeHidden();
   await expect(sheet.getByLabel("Your name", { exact: true })).toBeHidden();
   await expect(sheet.locator(".request-privacy p")).toBeHidden();
-  await expect(sheet.getByRole("button", { name: "Review details", exact: true })).toBeDisabled();
+  await expect(sheet.getByRole("button", { name: "Review appointment", exact: true })).toBeDisabled();
   await expect(sheet.getByLabel("Your appointment message")).toBeFocused();
   await sheet.getByLabel("Your appointment message").fill("My appointment draft");
   await sheet.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -214,7 +254,7 @@ test("a new submission uses its own status while the latest snapshot catches up"
   await page.getByRole("button", { name: "New request", exact: true }).click();
   await page.getByLabel("Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
   const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/requests/latest");
-  await page.getByRole("button", { name: "Review details", exact: true }).click();
+  await page.getByRole("button", { name: "Review appointment", exact: true }).click();
   await refreshed;
   await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Review");
   await expect(page.getByRole("heading", { name: "New resident", exact: true })).toBeVisible();
@@ -241,7 +281,7 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
     await coordinatorView(page, lang);
     await page.getByRole("button", { name: lang === "ar" ? "طلب جديد" : "New request", exact: true }).click();
     await page.getByLabel(lang === "ar" ? "رسالة موعدك" : "Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
-    const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة التفاصيل" : "Review details", exact: true });
+    const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true });
     await expect(review).toBeEnabled();
     await review.scrollIntoViewIfNeeded();
     const privacy = page.locator(".request-privacy summary");

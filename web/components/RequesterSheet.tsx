@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 import { SAMPLES, STATUS } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
 
-export function RequesterSheet({ snap, onCreated, composer = true, compose = false, onComposeChange }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean; compose?: boolean; onComposeChange?: (compose: boolean) => void }) {
+export function RequesterSheet({ snap, onCreated, composer = true, compose = false, onComposeChange, availability = "online" }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean; compose?: boolean; onComposeChange?: (compose: boolean) => void; availability?: "checking" | "online" | "offline" }) {
   const { t, lang } = useLanguage();
   const [min, setMin] = useState(false);
   const [text, setText] = useState("");
@@ -33,7 +33,9 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
   }, [compose]);
 
   async function submit(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setErr(null);
+    e.preventDefault();
+    if (availability !== "online" || busy) return;
+    setBusy(true); setErr(null);
     try {
       const created = await api.create(text.trim(), name.trim());
       setText(""); onCreated(created);
@@ -41,7 +43,7 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
   }
   return <m.section className={`sheet glass strong${min && !showForm ? " min" : ""}${showForm ? " is-composing" : ""}`} aria-label={t("Request an interpreter", "اطلب مترجماً")} layout transition={{ type: "spring", stiffness: 400, damping: 38 }}>
     <div className="sheet-head">
-      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Your space", "مساحتك")}</p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Request an interpreter", "اطلب مترجماً")}</h2>{showForm && <p id="msg-help">{t("Paste your appointment message.", "ألصق رسالة موعدك.")}</p>}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Your space", "مساحتك")}</p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Request an interpreter", "اطلب مترجماً")}</h2>{showForm && <p id="msg-help">{t("Paste your SMS or email", "ألصق رسالة الموعد أو البريد")}</p>}</div>
       {showForm && <AgentCompanion compact busy={busy} />}
       {compose && <button type="button" className="request-cancel" onClick={() => { restoreFocus.current = true; onComposeChange?.(false); setErr(null); }}>{t("Cancel", "إلغاء")}</button>}
       {snap && !showForm && <button className="icon-btn" aria-label={min ? t("Expand conversation", "توسيع المحادثة") : t("Collapse conversation", "طي المحادثة")} aria-expanded={!min} onClick={() => setMin((v) => !v)}><m.span animate={{ rotate: min ? 180 : 0 }} style={{ display: "inline-flex" }}><ChevronDown size={18} aria-hidden /></m.span></button>}
@@ -62,8 +64,8 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
           <details className="request-examples" name="request-extras"><summary><span>{t("Examples", "أمثلة")}</span><ChevronDown size={16} aria-hidden /></summary><div className="request-extra-body samples" role="group" aria-label={t("Try an example", "جرب مثالاً")}>{SAMPLES.map((s, i) => <button type="button" key={s.label} className="sample" onClick={(e) => { setText(s.text); e.currentTarget.closest("details")?.removeAttribute("open"); messageField.current?.focus(); }}>{labels[i]}</button>)}</div></details>
           <details className="optional-name" name="request-extras"><summary><span>{t("Name", "الاسم")} <span className="optional-hint">{t("(optional)", "(اختياري)")}</span></span><ChevronDown size={16} aria-hidden /></summary><div className="request-extra-body"><label className="sr-only" htmlFor="requester-name">{t("Your name", "اسمك")}</label><input id="requester-name" name="name" autoComplete="given-name" dir="auto" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Your name", "اسمك")} /></div></details>
         </div>
-        <button className="btn primary big request-continue" type="submit" disabled={busy || text.trim().length < 8}>{busy ? t("Reading your message…", "جارٍ قراءة رسالتك…") : t("Review details", "مراجعة التفاصيل")}<ArrowRight size={18} aria-hidden /></button>
-        <div className="request-form-foot"><p>{t("You confirm before matching.", "تؤكد التفاصيل قبل البحث.")}</p><details className="request-privacy"><summary><ShieldCheck size={15} aria-hidden />{t("Privacy", "الخصوصية")}</summary><p>{t("Phone, email and ID numbers are hidden before storage.", "تُحجب أرقام الهاتف والهوية والبريد قبل التخزين.")}</p></details></div>
+        <button className="btn primary big request-continue" type="submit" aria-describedby="request-service" disabled={availability !== "online" || busy || text.trim().length < 8}>{availability === "checking" ? t("Checking service…", "جارٍ التحقق من الخدمة…") : availability === "offline" ? t("Service unavailable", "الخدمة غير متاحة") : busy ? t("Reading your message…", "جارٍ قراءة رسالتك…") : t("Review appointment", "مراجعة الموعد")}{availability === "online" && <ArrowRight size={18} aria-hidden />}</button>
+        <div className="request-form-foot"><p id="request-service" role="status">{availability === "offline" ? t("You can prepare a message. Sending is unavailable.", "يمكنك تجهيز الرسالة. الإرسال غير متاح حالياً.") : t("You review the details before we contact interpreters.", "تراجع التفاصيل قبل إرسال طلبك للمترجمين.")}</p><details className="request-privacy"><summary><ShieldCheck size={15} aria-hidden />{t("Privacy", "الخصوصية")}</summary><p>{t("Phone numbers, email addresses and ID numbers are hidden before storage.", "تُحجب أرقام الهاتف والهوية وعناوين البريد قبل التخزين.")}</p></details></div>
         {err && <p className="error" role="alert">{err}</p>}
       </form>}
     </m.div>}</AnimatePresence>
