@@ -39,7 +39,7 @@ async function coordinatorView(page: Page, lang = "en") {
 
 async function openSettings(page: Page, lang = "en") {
   await openMenu(page, lang);
-  await page.locator(".display-details summary").click();
+  await page.getByRole("button", { name: lang === "ar" ? "العرض وإمكانية الوصول" : "Display & accessibility", exact: true }).click();
 }
 
 test.beforeEach(async ({ page }) => { await mockService(page); });
@@ -225,7 +225,7 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
     const rect = await review.boundingBox();
     expect(rect!.width).toBeGreaterThanOrEqual(44);
     expect(rect!.height).toBeGreaterThanOrEqual(44);
-    const settings = lang === "ar" ? "القائمة" : "Menu";
+    const settings = lang === "ar" ? "العرض وإمكانية الوصول" : "Display & accessibility";
     await openSettings(page, lang);
     await expect(page.getByRole("dialog", { name: settings, exact: true })).toHaveCSS("opacity", "1");
     const popup = await page.getByRole("dialog", { name: settings, exact: true }).boundingBox();
@@ -240,12 +240,12 @@ test("companion choice lives in display settings and text-first mode keeps entry
   await coordinatorView(page);
   await page.getByRole("button", { name: "New request", exact: true }).click();
   await openSettings(page);
-  const bounds = await page.getByRole("dialog", { name: "Menu", exact: true }).boundingBox();
+  const bounds = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
   await page.setViewportSize({ width: 390, height: 1000 });
   await expect.poll(async () => {
-    const rect = await page.getByRole("dialog", { name: "Menu", exact: true }).boundingBox();
+    const rect = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
     return rect!.x >= 0 && rect!.x + rect!.width <= 390;
   }).toBe(true);
   await page.getByRole("button", { name: "Pearl", exact: true }).click();
@@ -286,6 +286,62 @@ test("workspace menu is keyboard accessible and returns focus after actions", as
   await expect(page.locator(".workspace-help .how")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+for (const lang of ["en", "ar"]) {
+  test(`settings dialog dismisses, retains preferences, and restores keyboard focus (${lang})`, async ({ page }) => {
+    await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, size: 2, theme: "dark" })), lang);
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto("/");
+    await openSettings(page, lang);
+    const dialog = page.getByRole("dialog", { name: lang === "ar" ? "العرض وإمكانية الوصول" : "Display & accessibility", exact: true });
+    const menu = page.getByRole("button", { name: lang === "ar" ? "القائمة" : "Menu", exact: true });
+    const close = dialog.getByRole("button", { name: lang === "ar" ? "إغلاق الإعدادات" : "Close settings", exact: true });
+    await expect(page.getByRole("dialog", { name: lang === "ar" ? "القائمة" : "Menu", exact: true })).toBeHidden();
+    await expect(close).toBeFocused();
+    expect(await dialog.evaluate(element => element.matches(":modal"))).toBe(true);
+    await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
+    for (const [width, height] of [[320, 640], [768, 600], [1440, 900]]) {
+      await page.setViewportSize({ width, height });
+      await expect.poll(async () => {
+        const bounds = (await dialog.boundingBox())!;
+        return bounds.x >= 15 && bounds.y >= 15 && bounds.x + bounds.width <= width - 15 && bounds.y + bounds.height <= height - 15;
+      }).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    await close.focus();
+    await menu.evaluate(element => element.focus());
+    await expect(close).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(dialog.getByLabel(lang === "ar" ? "المظهر" : "Appearance", { exact: true })).toBeFocused();
+    await dialog.getByLabel(lang === "ar" ? "تقليل الحركة" : "Reduce motion", { exact: true }).check();
+    await page.mouse.click(4, 4);
+    await expect(dialog).toBeHidden();
+    await expect(menu).toBeFocused();
+    await expect(page.locator("body")).not.toHaveCSS("overflow", "hidden");
+    await openSettings(page, lang);
+    await expect(dialog.getByLabel(lang === "ar" ? "تقليل الحركة" : "Reduce motion", { exact: true })).toBeChecked();
+    await close.click();
+    await expect(dialog).toBeHidden();
+    await expect(menu).toBeFocused();
+    await openSettings(page, lang);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(menu).toBeFocused();
+  });
+}
+
+test("requester settings open directly as a modal and return focus to their button", async ({ page }) => {
+  await page.goto("/r/preview-token");
+  const trigger = page.getByRole("button", { name: "Display & accessibility", exact: true });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Display & accessibility", exact: true });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Appearance", { exact: true }).selectOption("dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
 });
 

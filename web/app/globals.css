@@ -94,7 +94,6 @@ p { margin: 0; text-wrap: pretty; }
 .pop-trigger { border: 0; background: none; padding: 0; margin: 0; color: inherit; cursor: pointer; display: inline-flex; align-items: center; border-radius: 50%; }
 .pop-trigger > svg { color: var(--ink-3); width: 22px; height: 22px; padding: 3px; border-radius: 50%; transition: color 0.2s, background-color 0.2s; }
 .pop-trigger:hover > svg { color: var(--ink); background: var(--fill); }
-.icon-btn.as-span { pointer-events: auto; }
 .popover {
   position: absolute; top: calc(100% + 10px); z-index: 70; width: 280px; padding: 14px 16px;
   border-radius: var(--r-lg); font-size: 14px; line-height: 1.45; color: var(--ink); text-align: left; transform-origin: top;
@@ -454,14 +453,19 @@ textarea:focus, input:focus { background: var(--surface-raised); }
 input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--action); flex: none; }
 button, input, textarea, select { scroll-margin-block: calc(var(--head-h) + 24px) 24px; }
 .btn.small, .sample { min-height: 44px; }
-.display-controls { display: flex; align-items: center; gap: 5px; }
+.display-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
 .display-settings { display: grid; gap: 12px; text-align: start; }
-.display-settings h2 { font-size: 18px; }
 .display-settings > label { font-weight: 600; }
 .setting-check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
-.display-details { min-width: 0; }
-.display-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.display-details .display-settings { padding-top: 12px; }
+.settings-dialog { width: min(560px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--ink); font: inherit; box-shadow: 0 24px 80px #0003; overflow: hidden; }
+.settings-dialog[open] { display: flex; flex-direction: column; }
+.settings-dialog::backdrop { background: #0006; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.settings-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--line); flex: none; }
+.settings-dialog-head h2 { font-size: max(20px, 1.125rem); }
+.settings-dialog-head .icon-btn { flex: none; border-radius: 12px; background: var(--fill); }
+.settings-dialog-body { min-height: 0; padding: 20px 24px 24px; overflow-y: auto; overscroll-behavior: contain; }
+.settings-dialog-body .a11y-bar { flex-wrap: wrap; }
+.settings-dialog-body :is(button, input, select) { scroll-margin-block: 12px; }
 .popover { text-align: start; max-width: calc(100vw - 32px); max-height: min(75dvh, 680px); overflow-y: auto; }
 .popover.end { inset-inline-end: -8px; inset-inline-start: auto; }
 .popover.start { inset-inline-start: -8px; inset-inline-end: auto; }
@@ -481,7 +485,7 @@ button, input, textarea, select { scroll-margin-block: calc(var(--head-h) + 24px
 .workspace-menu summary::-webkit-details-marker { display: none; }
 .workspace-menu summary::after { content: "+"; margin-inline-start: auto; color: var(--ink-3); font-size: 18px; }
 .workspace-menu details[open] > summary::after { content: "−"; }
-.workspace-menu > .display-details, .workspace-session { border-top: 1px solid var(--line); padding-top: 4px; }
+.workspace-session { border-top: 1px solid var(--line); padding-top: 4px; }
 .workspace-menu .display-settings, .workspace-menu .confirm, .workspace-menu .how { padding: 12px 8px 16px; }
 .workspace-session { display: grid; gap: 4px; margin-top: 4px; }
 [dir="rtl"] .workspace-arrow { transform: scaleX(-1); }

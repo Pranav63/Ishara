@@ -1,9 +1,8 @@
 "use client";
 
 import { MotionConfig } from "motion/react";
-import { Contrast, Languages, Settings2, Type } from "lucide-react";
-import { createContext, useContext, useEffect, useState } from "react";
-import { Popover } from "@/components/ui";
+import { Contrast, Languages, Settings2, Type, X } from "lucide-react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { CompanionAvatar } from "@/components/CompanionAvatar";
 import { DEFAULTS, parsePrefs, type Prefs } from "@/lib/preferences";
 
@@ -47,13 +46,37 @@ export function LanguageToggle() {
   return <button className="btn small language-toggle" onClick={() => update({ lang: prefs.lang === "en" ? "ar" : "en" })} lang={prefs.lang === "en" ? "ar" : "en"}><Languages size={17} aria-hidden />{prefs.lang === "en" ? "العربية" : "English"}</button>;
 }
 
-export function DisplaySettings({ inline = false, embedded = false }: { inline?: boolean; embedded?: boolean }) {
+export function DisplaySettings({ inline = false }: { inline?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
+  return <div className="display-controls">
+    <LanguageToggle />
+    <button type="button" className={inline ? "btn small" : "icon-btn"} aria-label={t("Display & accessibility", "العرض وإمكانية الوصول")} aria-haspopup="dialog" onClick={() => setOpen(true)}><Settings2 size={20} aria-hidden />{inline && t("Display & accessibility", "العرض وإمكانية الوصول")}</button>
+    <DisplaySettingsDialog open={open} onClose={() => setOpen(false)} />
+  </div>;
+}
+
+export function DisplaySettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { prefs, update } = usePreferences();
   const { t } = useLanguage();
-  const controls = <div className="display-settings">
-    <h2>{t("Make Ishara yours", "إشارة كما تناسبك")}</h2>
-    <label htmlFor={inline || embedded ? "theme-inline" : "theme-menu"}>{t("Appearance", "المظهر")}</label>
-    <select id={inline || embedded ? "theme-inline" : "theme-menu"} value={prefs.theme} onChange={(e) => update({ theme: e.target.value as Prefs["theme"] })}>
+  const id = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) { dialog.current?.close(); return; }
+    dialog.current?.showModal();
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
+  return <dialog ref={dialog} className="settings-dialog" aria-labelledby={id} onClose={onClose} onClick={(e) => {
+    if (e.target !== e.currentTarget) return;
+    const bounds = e.currentTarget.getBoundingClientRect();
+    if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) e.currentTarget.close();
+  }}>
+    <header className="settings-dialog-head"><h2 id={id}>{t("Display & accessibility", "العرض وإمكانية الوصول")}</h2><button type="button" autoFocus className="icon-btn" aria-label={t("Close settings", "إغلاق الإعدادات")} onClick={() => dialog.current?.close()}><X size={20} aria-hidden /></button></header>
+    <div className="display-settings settings-dialog-body">
+    <label htmlFor={`${id}-theme`}>{t("Appearance", "المظهر")}</label>
+    <select id={`${id}-theme`} value={prefs.theme} onChange={(e) => update({ theme: e.target.value as Prefs["theme"] })}>
       <option value="system">{t("Use device setting", "حسب إعدادات الجهاز")}</option><option value="light">{t("Light", "فاتح")}</option><option value="dark">{t("Dark", "داكن")}</option>
     </select>
     <div className="a11y-bar">
@@ -67,11 +90,6 @@ export function DisplaySettings({ inline = false, embedded = false }: { inline?:
     <p className="small muted">{t("Keeps every update in text. Hides animation and video, with no flashing or vibration.", "يُبقي جميع التحديثات نصية ويخفي الحركة والفيديو، دون وميض أو اهتزاز.")}</p>
     <label className="setting-check"><input type="checkbox" checked={prefs.reducedMotion} onChange={(e) => update({ reducedMotion: e.target.checked })} />{t("Reduce motion", "تقليل الحركة")}</label>
     <label className="setting-check"><input type="checkbox" checked={prefs.alerts} disabled={prefs.textOnly} onChange={(e) => update({ alerts: e.target.checked })} />{t("Visual and vibration alerts", "تنبيهات مرئية واهتزازية")}</label>
-  </div>;
-  const disclosure = <details className="display-details"><summary><Settings2 size={18} aria-hidden />{t("Display & accessibility", "العرض وإمكانية الوصول")}</summary>{controls}</details>;
-  if (embedded) return disclosure;
-  return <div className="display-controls">
-    <LanguageToggle />
-    {inline ? disclosure : <Popover label={t("Display & accessibility", "العرض وإمكانية الوصول")} align="end" trigger={<span className="icon-btn as-span"><Settings2 size={20} aria-hidden /></span>}>{controls}</Popover>}
-  </div>;
+    </div>
+  </dialog>;
 }
