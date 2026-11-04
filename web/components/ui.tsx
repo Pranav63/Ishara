@@ -1,8 +1,28 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { Info } from "lucide-react";
+import { Info, X } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+
+export function Modal({ open, onClose, title, closeLabel, children }: { open: boolean; onClose: () => void; title: string; closeLabel: string; children: React.ReactNode }) {
+  const id = useId();
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) { dialog.current?.close(); return; }
+    dialog.current?.showModal();
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
+  return <dialog ref={dialog} className="app-dialog" aria-labelledby={id} onClose={onClose} onClick={(e) => {
+    if (e.target !== e.currentTarget) return;
+    const bounds = e.currentTarget.getBoundingClientRect();
+    if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) e.currentTarget.close();
+  }}>
+    <header className="app-dialog-head"><h2 id={id}>{title}</h2><button type="button" autoFocus className="icon-btn" aria-label={closeLabel} onClick={() => dialog.current?.close()}><X size={20} aria-hidden /></button></header>
+    <div className="app-dialog-body">{children}</div>
+  </dialog>;
+}
 
 // Small popover anchored to its trigger. Closes on Escape or an outside click.
 export function Popover({ trigger, label, children, align = "start", wide }: { trigger: React.ReactNode; label: string; children: React.ReactNode | ((close: () => void) => React.ReactNode); align?: "start" | "end"; wide?: boolean }) {

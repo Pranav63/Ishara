@@ -1,8 +1,9 @@
 "use client";
 
 import { MotionConfig } from "motion/react";
-import { Contrast, Languages, Settings2, Type, X } from "lucide-react";
-import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
+import { Contrast, Languages, Settings2, Type } from "lucide-react";
+import { createContext, useContext, useEffect, useId, useState } from "react";
+import { Modal } from "@/components/ui";
 import { CompanionAvatar } from "@/components/CompanionAvatar";
 import { DEFAULTS, parsePrefs, type Prefs } from "@/lib/preferences";
 
@@ -60,21 +61,8 @@ export function DisplaySettingsDialog({ open, onClose }: { open: boolean; onClos
   const { prefs, update } = usePreferences();
   const { t } = useLanguage();
   const id = useId();
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    if (!open) { dialog.current?.close(); return; }
-    dialog.current?.showModal();
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previous; };
-  }, [open]);
-  return <dialog ref={dialog} className="settings-dialog" aria-labelledby={id} onClose={onClose} onClick={(e) => {
-    if (e.target !== e.currentTarget) return;
-    const bounds = e.currentTarget.getBoundingClientRect();
-    if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) e.currentTarget.close();
-  }}>
-    <header className="settings-dialog-head"><h2 id={id}>{t("Display & accessibility", "العرض وإمكانية الوصول")}</h2><button type="button" autoFocus className="icon-btn" aria-label={t("Close settings", "إغلاق الإعدادات")} onClick={() => dialog.current?.close()}><X size={20} aria-hidden /></button></header>
-    <div className="display-settings settings-dialog-body">
+  return <Modal open={open} onClose={onClose} title={t("Display & accessibility", "العرض وإمكانية الوصول")} closeLabel={t("Close settings", "إغلاق الإعدادات")}>
+    <div className="display-settings">
     <label htmlFor={`${id}-theme`}>{t("Appearance", "المظهر")}</label>
     <select id={`${id}-theme`} value={prefs.theme} onChange={(e) => update({ theme: e.target.value as Prefs["theme"] })}>
       <option value="system">{t("Use device setting", "حسب إعدادات الجهاز")}</option><option value="light">{t("Light", "فاتح")}</option><option value="dark">{t("Dark", "داكن")}</option>
@@ -91,5 +79,5 @@ export function DisplaySettingsDialog({ open, onClose }: { open: boolean; onClos
     <label className="setting-check"><input type="checkbox" checked={prefs.reducedMotion} onChange={(e) => update({ reducedMotion: e.target.checked })} />{t("Reduce motion", "تقليل الحركة")}</label>
     <label className="setting-check"><input type="checkbox" checked={prefs.alerts} disabled={prefs.textOnly} onChange={(e) => update({ alerts: e.target.checked })} />{t("Visual and vibration alerts", "تنبيهات مرئية واهتزازية")}</label>
     </div>
-  </dialog>;
+  </Modal>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRight, Hand, Menu, Play, Settings2, Users, X } from "lucide-react";
+import { Activity, ArrowRight, CircleHelp, Hand, Menu, Play, Settings2, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -34,6 +34,7 @@ export default function Console() {
   const [mode, setMode] = useState<"resident" | "coordinator">("resident");
   const [compose, setCompose] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [created, setCreated] = useState<Snapshot | null>(null);
   useEffect(() => {
     const check = () => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setServiceError(false); }).catch(() => setServiceError(true));
@@ -65,13 +66,14 @@ export default function Console() {
             {coordinator && <button type="button" onClick={() => { close(); setDrawer(true); }}><Activity size={18} aria-hidden />{t("Activity & support", "النشاط والدعم")}{events.length > 0 && <span className="workspace-count num">{events.length}</span>}</button>}
             {coordinator && data?.config.demo && <Link href="/stage" onClick={close}><Play size={18} aria-hidden />{t("Presentation", "العرض التقديمي")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></Link>}
             <button type="button" aria-haspopup="dialog" onClick={() => { close(); setSettingsOpen(true); }}><Settings2 size={18} aria-hidden />{t("Display & accessibility", "العرض وإمكانية الوصول")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></button>
+            <button type="button" aria-haspopup="dialog" onClick={() => { close(); setHelpOpen(true); }}><CircleHelp size={18} aria-hidden />{t("How Ishara works", "كيف تعمل إشارة")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></button>
           </div>
-          <HowItWorks />
           <div className="workspace-session"><OperatorAccess session={session} authRequired={authRequired} onChange={(s) => { setSession(s); setServiceError(false); if (s.authenticated) setMode("coordinator"); close(); }} />{coordinator && data?.config.demo && <ResetButton onDone={() => { setCreated(null); setCompose(false); refresh(); close(); }} />}</div>
         </div>}
       </Popover>
     </Header>
     <DisplaySettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    <HowItWorks open={helpOpen} onClose={() => setHelpOpen(false)} />
     <OfflineBanner online={online} />
     {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setCompose(false); } refresh(); }} />{!compose && <OfferDock snap={snap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
       <section className="resident-intro">

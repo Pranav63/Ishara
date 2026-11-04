@@ -1,18 +1,24 @@
 "use client";
 
-import { CircleHelp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useLanguage } from "@/components/Preferences";
+import { Modal } from "@/components/ui";
 
-export function HowItWorks() {
+export function HowItWorks({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useLanguage();
   const steps = [
-    [t("Read & review", "قراءة ومراجعة"), t("Ishara reads the appointment message and hides contact and ID numbers. The resident checks the date, place and sign language before matching starts.", "تقرأ إشارة رسالة الموعد وتحجب بيانات الاتصال والهوية. يراجع طالب الخدمة التاريخ والمكان ولغة الإشارة قبل بدء المطابقة.")],
-    [t("Match", "مطابقة"), t("Eligible interpreters with the right sign language and a free slot receive offers. Medical and legal appointments require certification.", "يتلقى المترجمون المؤهلون المتاحون بلغة الإشارة المناسبة عروضاً. تتطلب المواعيد الطبية والقانونية الاعتماد المهني.")],
-    [t("Confirm", "تأكيد"), t("A booking is confirmed when an interpreter accepts. Arrival updates come from the interpreter, without GPS tracking.", "يُؤكد الحجز عند قبول مترجم. يشارك المترجم تحديثات الوصول دون تتبع الموقع.")],
-    [t("Get more support", "دعم إضافي"), t("Cancellations trigger rematching. If no match is available, the request enters the coordinator queue and remote support is offered.", "يؤدي الاعتذار إلى إعادة المطابقة. إذا لم يتوفر مترجم، يدخل الطلب قائمة انتظار المنسق ويُعرض الدعم عن بُعد.")],
+    [t("Share & review", "شارك وراجع"), t("Paste your appointment message, then check the place, date, time and sign language.", "ألصق رسالة موعدك، ثم راجع المكان والتاريخ والوقت ولغة الإشارة.")],
+    [t("Find your interpreter", "اعثر على مترجمك"), t("Available interpreters receive offers. Your booking is confirmed only when someone accepts.", "يتلقى المترجمون المتاحون عروضاً. يتأكد حجزك فقط عند قبول أحدهم.")],
+    [t("Follow in text", "تابع بالنص"), t("See updates on your private request page, including arrival estimates shared by your interpreter.", "تابع التحديثات في صفحة طلبك الخاصة، بما فيها وقت الوصول المتوقع الذي يشاركه مترجمك.")],
   ];
-  return <details className="workspace-help"><summary><CircleHelp size={18} aria-hidden />{t("How Ishara works", "كيف تعمل إشارة")}</summary><div className="how"><ol>{steps.map(([title, detail]) => <li key={title}><strong>{title}</strong><p>{detail}</p></li>)}</ol>
-    <details><summary>{t("Who uses Coordinator?", "من يستخدم عرض المنسق؟")}</summary><p>{t("Coordinators are staff who manage interpreter offers and the support queue. You follow your own request on its private page. Staff tools require sign-in; the demo makes them available for testing.", "المنسقون موظفون يديرون عروض المترجمين وقائمة الدعم. تتابع طلبك في صفحته الخاصة. تتطلب أدوات الموظفين تسجيل الدخول؛ ويتيحها العرض التجريبي للاختبار.")}</p></details>
-    <details><summary>{t("What happens to my contact details?", "ماذا يحدث لبيانات الاتصال؟")}</summary><p>{t("Phone numbers, email addresses and ID numbers are hidden before storage. Only include information needed for your appointment.", "تُحجب أرقام الهاتف وعناوين البريد وأرقام الهوية قبل التخزين. أدرج المعلومات اللازمة لموعدك فقط.")}</p></details>
-  </div></details>;
+  const questions = [
+    [t("What if nobody is available?", "ماذا لو لم يتوفر مترجم؟"), t("Your request goes to the coordinator queue. Remote video support is shown when available. If an interpreter cancels, matching starts again.", "ينتقل طلبك إلى قائمة انتظار المنسق. يظهر الدعم المرئي عن بُعد عند توفره. إذا اعتذر المترجم، تبدأ المطابقة مجدداً.")],
+    [t("Who uses Coordinator?", "من يستخدم عرض المنسق؟"), t("Staff manage offers and support requests. You stay on your private request page. Staff sign in; the demo also lets you try their view.", "يدير الموظفون العروض وطلبات الدعم. تبقى أنت في صفحة طلبك الخاصة. يسجّل الموظفون الدخول؛ ويتيح العرض التجريبي تجربة واجهتهم أيضاً.")],
+    [t("How are interpreters matched?", "كيف تتم مطابقة المترجمين؟"), t("By sign language, availability and appointment type. Medical and legal appointments require certified interpreters.", "حسب لغة الإشارة والتوفر ونوع الموعد. تتطلب المواعيد الطبية والقانونية مترجمين معتمدين.")],
+    [t("What about my privacy?", "ماذا عن خصوصيتي؟"), t("Phone numbers, email addresses and ID numbers are hidden before storage. Arrival times come from the interpreter, without GPS tracking. Share only the details needed for your appointment.", "تُحجب أرقام الهاتف وعناوين البريد وأرقام الهوية قبل التخزين. يشارك المترجم وقت الوصول دون تتبع الموقع. شارك فقط التفاصيل اللازمة لموعدك.")],
+  ];
+  return <Modal open={open} onClose={onClose} title={t("How Ishara works", "كيف تعمل إشارة")} closeLabel={t("Close guide", "إغلاق الدليل")}><div className="how">
+    <ol className="how-steps" role="list">{steps.map(([title, detail], i) => <li key={title}><span className="how-step-number" aria-hidden>{i + 1}</span><div><h3>{title}</h3><p>{detail}</p></div></li>)}</ol>
+    <div className="how-questions">{questions.map(([question, answer]) => <details key={question} name="ishara-help-questions"><summary>{question}<ChevronDown size={16} aria-hidden /></summary><p>{answer}</p></details>)}</div>
+  </div></Modal>;
 }

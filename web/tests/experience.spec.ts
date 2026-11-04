@@ -104,12 +104,12 @@ test("Arabic landing reflows at 320px and help works with a keyboard", async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.locator(".resident-help, .resident-questions")).toHaveCount(0);
   await openMenu(page, "ar");
-  await page.locator(".workspace-help > summary").focus();
+  await page.getByRole("button", { name: "كيف تعمل إشارة", exact: true }).focus();
   await page.keyboard.press("Enter");
   const question = page.getByText("من يستخدم عرض المنسق؟", { exact: true });
   await question.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".how details").first()).toHaveAttribute("open", "");
+  await expect(page.locator(".how details").nth(1)).toHaveAttribute("open", "");
   await expect(page.locator(".prototype-note")).toBeVisible();
 });
 
@@ -281,13 +281,63 @@ test("workspace menu is keyboard accessible and returns focus after actions", as
   await expect(page.locator(".drawer")).toBeHidden();
   await expect(trigger).toBeFocused();
   await page.keyboard.press("Enter");
-  await page.locator(".workspace-help > summary").focus();
+  await page.getByRole("button", { name: "How Ishara works", exact: true }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".workspace-help .how")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "How Ishara works", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
   await expect(trigger).toBeFocused();
 });
+
+for (const lang of ["en", "ar"]) {
+  test(`help dialog keeps the guide readable and questions accessible (${lang})`, async ({ page }) => {
+    await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, size: 2, theme: "dark" })), lang);
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto("/");
+    await openMenu(page, lang);
+    const trigger = page.getByRole("button", { name: lang === "ar" ? "كيف تعمل إشارة" : "How Ishara works", exact: true });
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const guide = page.getByRole("dialog", { name: lang === "ar" ? "كيف تعمل إشارة" : "How Ishara works", exact: true });
+    const close = guide.getByRole("button", { name: lang === "ar" ? "إغلاق الدليل" : "Close guide", exact: true });
+    const menu = page.getByRole("button", { name: lang === "ar" ? "القائمة" : "Menu", exact: true });
+    await expect(page.getByRole("dialog", { name: lang === "ar" ? "القائمة" : "Menu", exact: true })).toBeHidden();
+    await expect(close).toBeFocused();
+    await expect(guide.locator(".how-steps li")).toHaveCount(3);
+    await expect(guide.locator("details[open]")).toHaveCount(0);
+    const questions = guide.locator(".how-questions details");
+    await questions.first().locator("summary").focus();
+    await page.keyboard.press("Enter");
+    await expect(questions.first()).toHaveAttribute("open", "");
+    await questions.last().locator("summary").focus();
+    await page.keyboard.press("Enter");
+    await expect(questions.last()).toHaveAttribute("open", "");
+    await expect(questions.first()).not.toHaveAttribute("open", "");
+    await expect(close).toBeInViewport();
+    for (const [width, height] of [[320, 640], [1440, 900]]) {
+      await page.setViewportSize({ width, height });
+      await expect.poll(async () => {
+        const bounds = (await guide.boundingBox())!;
+        return bounds.x >= 15 && bounds.y >= 15 && bounds.x + bounds.width <= width - 15 && bounds.y + bounds.height <= height - 15;
+      }).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    await page.mouse.click(4, 4);
+    await expect(guide).toBeHidden();
+    await expect(menu).toBeFocused();
+    await expect(page.locator("body")).not.toHaveCSS("overflow", "hidden");
+    await openMenu(page, lang);
+    await trigger.click();
+    await page.keyboard.press("Escape");
+    await expect(guide).toBeHidden();
+    await expect(menu).toBeFocused();
+    await openMenu(page, lang);
+    await trigger.click();
+    await close.click();
+    await expect(guide).toBeHidden();
+    await expect(menu).toBeFocused();
+  });
+}
 
 for (const lang of ["en", "ar"]) {
   test(`settings dialog dismisses, retains preferences, and restores keyboard focus (${lang})`, async ({ page }) => {
