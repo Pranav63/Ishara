@@ -122,6 +122,14 @@ for (const lang of ["en", "ar"]) {
       await page.setViewportSize({ width, height });
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
       await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة التفاصيل" : "Review details", exact: true })).toBeInViewport();
+      if (width > 560) {
+        const alignment = await page.locator(".welcome-guide").evaluate(guide => {
+          const icons = [...guide.querySelectorAll(".welcome-tile")].map(icon => icon.getBoundingClientRect());
+          const labels = [...guide.querySelectorAll("li")].map(label => label.getBoundingClientRect());
+          return labels.map((label, i) => Math.abs(label.left + label.width / 2 - icons[i].left - icons[i].width / 2));
+        });
+        expect(alignment.every(offset => offset < 1)).toBe(true);
+      }
     }
   });
 }

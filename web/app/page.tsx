@@ -80,10 +80,11 @@ export default function Console() {
         <div className="service-label"><Hand size={18} aria-hidden />{t("Sign language support · Dubai", "دعم بلغة الإشارة · دبي")}</div>
         <h1>{t("Your appointment.", "موعدك.")} <span>{t("Your way.", "بطريقتك.")}</span></h1>
         <p className="intro-description">{t("Find a sign language interpreter. Review your details, then follow every update in text.", "اعثر على مترجم لغة إشارة. راجع التفاصيل، ثم تابع كل تحديث بالنص.")}</p>
-        <WelcomeArt />
-        <ol className="resident-flow" aria-label={t("How your request works", "كيف يعمل طلبك")}>
-          {[["Share", "شارك"], ["Review", "راجع"], ["Follow", "تابع"]].map(([en, ar], i) => <li key={en}><span aria-hidden>{i + 1}</span>{t(en, ar)}</li>)}
-        </ol>
+        <div className="welcome-guide"><WelcomeArt />
+          <ol className="resident-flow" aria-label={t("How your request works", "كيف يعمل طلبك")}>
+            {[["Share", "شارك"], ["Review", "راجع"], ["Follow", "تابع"]].map(([en, ar]) => <li key={en}>{t(en, ar)}</li>)}
+          </ol>
+        </div>
       </section>
       <div id="request-panel" className="resident-request"><RequesterSheet snap={null} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
       <footer className="resident-footer"><span>{t("No phone call needed.", "دون مكالمة هاتفية.")}</span><span>{t("Help in Menu", "المساعدة في القائمة")}</span></footer>

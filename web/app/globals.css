@@ -601,28 +601,22 @@ html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover
 .resident-intro h1 { font-size: clamp(40px, 4.2vw, 56px); letter-spacing: -.035em; line-height: 1.12; font-weight: 600; }
 .resident-intro h1 span { display: block; color: var(--accent); }
 .intro-description { color: var(--ink-2); line-height: 1.6; font-size: 17px; max-width: 37ch; }
-.welcome-art { display: block; width: min(100%, 360px); height: auto; color: var(--ink-2); overflow: visible; }
-.welcome-track, .welcome-ink, .welcome-orbit { fill: none; stroke: var(--line); stroke-width: 1; }
+.welcome-guide { display: grid; gap: 4px; width: min(100%, 400px); }
+.welcome-art { display: block; width: 100%; height: auto; color: var(--accent); }
+.welcome-track, .welcome-ink { fill: none; stroke: var(--line); stroke-width: 1; }
 .welcome-ink { stroke: var(--accent); stroke-width: 1.5; }
-.welcome-orbit { stroke-dasharray: 2 7; }
-.welcome-node { fill: var(--surface); stroke: var(--line); }
-.welcome-mark { transform-origin: 200px 70px; transition: transform .3s var(--ease); }
-.welcome-mark rect { fill: var(--surface); stroke: var(--accent); stroke-width: 1; }
-.welcome-mark svg { color: var(--accent); }
-.welcome-dot { fill: var(--accent); }
+.welcome-tile { fill: var(--surface); stroke: var(--line); }
+.welcome-mark { transform-origin: 180px 40px; }
 @media (prefers-reduced-motion: no-preference) {
   .welcome-ink { stroke-dasharray: 1; animation: welcome-connect 1.8s .15s both; }
   .welcome-mark { animation: welcome-greet 1.8s .15s both; }
-  .welcome-art:hover .welcome-mark { transform: rotate(-4deg); }
 }
 @keyframes welcome-connect { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes welcome-greet { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-6px) rotate(-4deg); } }
-html.reduce-motion .welcome-art:hover .welcome-mark { transform: none; }
 .text-only .welcome-art { display: none; }
-.resident-flow { list-style: none; margin: 0; padding: 0; width: min(100%, 360px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.resident-flow li { position: relative; min-width: 0; display: grid; align-content: start; justify-items: start; gap: 8px; color: var(--ink-2); font-size: max(14px, .875rem); font-weight: 500; }
-.resident-flow li:not(:last-child)::after { content: ""; position: absolute; top: 16px; inset-inline-start: 40px; inset-inline-end: 0; border-top: 1px solid var(--line); }
-.resident-flow li > span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-soft); color: var(--accent); font-size: max(13px, .8rem); font-weight: 600; }
+.resident-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.resident-flow li { min-width: 0; text-align: center; color: var(--ink-2); font-size: max(14px, .875rem); font-weight: 500; }
+[dir="rtl"] .welcome-art { transform: scaleX(-1); }
 .resident-request { min-width: 0; }
 .resident-request .sheet { position: relative; inset: auto; width: 100%; margin: 0; max-height: none; background: var(--surface); }
 .resident-request .sheet-head { padding: 24px 24px 18px; }
@@ -657,7 +651,6 @@ html.reduce-motion .welcome-art:hover .welcome-mark { transform: none; }
 @media (max-width: 899px) {
   .resident-grid { max-width: 640px; grid-template-columns: 1fr; grid-template-rows: auto auto auto; align-content: center; padding-top: 20px; gap: 20px; }
   .resident-intro { gap: 12px; }
-  .welcome-art { display: none; }
   .resident-intro h1 { font-size: clamp(32px, 6vw, 40px); }
   .resident-intro, .resident-request { grid-column: 1; grid-row: auto; }
   .console-view .canvas { height: 34vh; min-height: 220px; }
@@ -686,7 +679,7 @@ html.reduce-motion .welcome-art:hover .welcome-mark { transform: none; }
   .header-actions > .btn:disabled { display: none; }
   .resident-grid { padding: 16px; gap: 16px; }
   .resident-intro h1 { font-size: 32px; }
-  .resident-flow { display: none; }
+  .welcome-guide { display: none; }
   .intro-description { font-size: max(14px, .875rem); }
   .resident-request .sheet-head { padding: 20px 20px 16px; }
   .resident-request .composer { padding-inline: 20px; }
