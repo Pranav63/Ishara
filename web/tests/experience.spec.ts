@@ -69,7 +69,7 @@ test("blocked browser storage never claims a private link was saved or removed",
     localStorage.setItem("ishara.requests", JSON.stringify(["preview-token"]));
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function(key, value) {
-      if (key === "ishara.requests") throw new DOMException("Storage blocked", "QuotaExceededError");
+      if (key === "ishara.requests" || key === "ishara.requests.archived") throw new DOMException("Storage blocked", "QuotaExceededError");
       return original.call(this, key, value);
     };
   });
@@ -77,9 +77,109 @@ test("blocked browser storage never claims a private link was saved or removed",
   await expect(page.locator("main").getByRole("alert")).toContainText("could not save your link");
   await page.getByRole("button", { name: "Requests", exact: true }).click();
   const history = page.getByRole("dialog", { name: "Your requests", exact: true });
+  await history.getByRole("button", { name: "Archive Rashid Hospital", exact: true }).click();
+  await expect(history.getByRole("alert")).toContainText("Could not save the archive change");
   await history.getByRole("button", { name: "Remove Rashid Hospital from this browser", exact: true }).click();
   await expect(history.getByRole("alert")).toContainText("could not be removed");
   await expect(history.getByRole("link")).toHaveCount(1);
+});
+
+test("requester can archive, filter, restore and remove saved requests", async ({ page }) => {
+  const earlier = { ...request, id: "earlier", token: "earlier-token", status: "dispatching", appointment: { ...request.appointment, entity: "Dubai school", starts_at: Date.parse("2026-11-16T06:30:00Z") / 1000 } };
+  await page.addInitScript(() => localStorage.setItem("ishara.requests", JSON.stringify(["preview-token", "earlier-token"])));
+  await page.route("**/api/r/earlier-token", route => route.fulfill({ json: earlier }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  let history = page.getByRole("dialog", { name: "Your requests", exact: true });
+  await expect(history.getByRole("link")).toHaveCount(2);
+  await history.getByRole("button", { name: "Current", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(2);
+  await history.getByLabel("Search requests", { exact: true }).fill("school");
+  await history.getByLabel("Request status", { exact: true }).selectOption("dispatching");
+  await history.getByRole("button", { name: "Filters", exact: true }).click();
+  await history.getByLabel("From", { exact: true }).fill("2026-11-16");
+  await history.getByLabel("To", { exact: true }).fill("2026-11-16");
+  await history.getByLabel("Sort by", { exact: true }).selectOption("soonest");
+  await expect(history.getByRole("link")).toHaveCount(1);
+  await expect(history.getByRole("link")).toContainText("Dubai school");
+  await history.getByRole("button", { name: "Archive Dubai school", exact: true }).click();
+  await expect(history).toContainText("Matching and support continue");
+  await expect(history.getByRole("button", { name: "Current", exact: true })).toBeFocused();
+  await expect(history.getByRole("link")).toHaveCount(0);
+  await history.getByRole("button", { name: "Archived", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(1);
+  await page.reload();
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  history = page.getByRole("dialog", { name: "Your requests", exact: true });
+  await expect(history.getByRole("link")).toHaveCount(1);
+  await history.getByRole("button", { name: "Archived", exact: true }).click();
+  await history.getByRole("button", { name: "Restore Dubai school", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(0);
+  await history.getByRole("button", { name: "Current", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(2);
+  await history.getByLabel("Request status", { exact: true }).selectOption("escalated");
+  await expect(history).toContainText("No requests match these filters");
+  await history.getByRole("button", { name: "Clear filters", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(2);
+});
+
+test("coordinator archive failures retain work and successful archives can be restored", async ({ page }) => {
+  let archived = false;
+  let fail = true;
+  let saves = 0;
+  await page.route("**/api/requests*", route => {
+    const url = new URL(route.request().url());
+    if (url.pathname !== "/api/requests") return route.fallback();
+    return route.fulfill({ json: (url.searchParams.get("archived") === "true") === archived ? [request] : [] });
+  });
+  await page.route("**/api/requests/layout-test/archive", route => {
+    saves++;
+    if (fail) return route.fulfill({ status: 503, json: { detail: "Archive unavailable" } });
+    archived = route.request().postDataJSON().archived;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/");
+  await coordinatorView(page);
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  const history = page.getByRole("dialog", { name: "Recent requests", exact: true });
+  await history.getByRole("button", { name: "Archive Rashid Hospital", exact: true }).click();
+  await expect(history.getByRole("alert")).toContainText("Archive unavailable");
+  await expect(history.locator(".history-request")).toHaveCount(1);
+  fail = false;
+  await history.getByRole("button", { name: "Archive Rashid Hospital", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await expect(history).toContainText("Request archived");
+  expect(saves).toBe(2);
+  await expect(history.locator(".history-request")).toHaveCount(0);
+  await history.getByRole("button", { name: "Archived", exact: true }).click();
+  await history.getByRole("button", { name: "Restore Rashid Hospital", exact: true }).click();
+  await expect(history.locator(".history-request")).toHaveCount(0);
+  await history.getByRole("button", { name: "Current", exact: true }).click();
+  await expect(history.locator(".history-request")).toHaveCount(1);
+  await history.getByRole("button", { name: "Filters", exact: true }).click();
+  await history.getByLabel("Search requests", { exact: true }).fill("Test resident");
+  await history.getByLabel("Request status", { exact: true }).selectOption("completed");
+  await history.getByLabel("From", { exact: true }).fill("2026-11-12");
+  await history.getByLabel("To", { exact: true }).fill("2026-11-16");
+  const response = page.waitForRequest(r => new URL(r.url()).searchParams.get("sort") === "soonest");
+  await history.getByLabel("Sort by", { exact: true }).selectOption("soonest");
+  const query = new URL((await response).url()).searchParams;
+  expect(Object.fromEntries(query)).toEqual({ q: "Test resident", status: "completed", date_from: "2026-11-12", date_to: "2026-11-16", sort: "soonest" });
+});
+
+for (const lang of ["en", "ar"]) test(`request history filters fit a narrow viewport with large text (${lang})`, async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.addInitScript(lang => {
+    localStorage.setItem("ishara.prefs", JSON.stringify({ lang, theme: "dark", size: 2 }));
+    localStorage.setItem("ishara.requests", JSON.stringify(["preview-token"]));
+  }, lang);
+  await page.goto("/");
+  await page.getByRole("button", { name: lang === "ar" ? "الطلبات" : "Requests", exact: true }).click();
+  const history = page.getByRole("dialog");
+  await history.getByRole("button", { name: lang === "ar" ? "عوامل التصفية" : "Filters", exact: true }).click();
+  await expect(history.locator(".history-request")).toHaveCount(1);
+  expect(await history.evaluate(el => [...el.querySelectorAll("input, select, button")].filter(x => x.getClientRects().length).every(x => { const r = x.getBoundingClientRect(), b = el.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right; }))).toBe(true);
+  await history.getByRole("button", { name: lang === "ar" ? "أرشفة Rashid Hospital" : "Archive Rashid Hospital", exact: true }).click();
+  await expect(history).toContainText(lang === "ar" ? "تمت أرشفة الطلب" : "Request archived");
 });
 
 test("production coordinator shows read-only interpreter responses", async ({ page }) => {

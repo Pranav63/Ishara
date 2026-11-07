@@ -1,4 +1,5 @@
 import type { Appointment, Config, Interp, InterpreterView, Metrics, Snapshot } from "./types";
+import type { HistoryEntry, HistoryFilters } from "./request-history";
 
 export const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 export type OperatorSession = { authenticated: boolean; demo: boolean };
@@ -25,7 +26,17 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T,>(path: string, body?: unknown) => call<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const api = {
-  requests: () => call<Pick<Snapshot, "id" | "created_at" | "status" | "requester_name" | "appointment">[]>("/api/requests"),
+  requests: (archived = false, filters?: HistoryFilters) => {
+    const params = new URLSearchParams();
+    if (archived) params.set("archived", "true");
+    if (filters?.query.trim()) params.set("q", filters.query.trim());
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.from) params.set("date_from", filters.from);
+    if (filters?.to) params.set("date_to", filters.to);
+    if (filters?.sort && filters.sort !== "newest") params.set("sort", filters.sort);
+    return call<HistoryEntry[]>(`/api/requests${params.size ? `?${params}` : ""}`);
+  },
+  archiveRequest: (id: string, archived: boolean) => post<{ ok: boolean }>(`/api/requests/${encodeURIComponent(id)}/archive`, { archived }),
   request: (id: string) => call<Snapshot>(`/api/requests/${encodeURIComponent(id)}`),
   latest: () => call<Snapshot | null>("/api/requests/latest"),
   interpreters: () => call<Interp[]>("/api/interpreters"),

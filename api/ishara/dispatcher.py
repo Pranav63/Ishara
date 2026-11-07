@@ -353,11 +353,34 @@ class Dispatcher:
         row = self.store.one("SELECT id FROM requests ORDER BY created_at DESC, rowid DESC LIMIT 1")
         return self.snapshot(row["id"]) if row else None
 
-    def recent_requests(self) -> list:
-        rows = self.store.q("SELECT id, created_at, status, requester_name, appointment FROM requests ORDER BY created_at DESC, rowid DESC LIMIT 100")
+    def recent_requests(self, archived=False, query="", status=None, start=None, end=None, sort="newest") -> list:
+        where = ["a.request_id IS NOT NULL" if archived else "a.request_id IS NULL"]
+        args = []
+        if query:
+            where.append("instr(lower(r.id || ' ' || r.requester_name || ' ' || json_extract(r.appointment, '$.entity') || ' ' || json_extract(r.appointment, '$.area')), lower(?)) > 0")
+            args.append(query)
+        if status:
+            where.append("r.status=?")
+            args.append(status)
+        if start is not None:
+            where.append("json_extract(r.appointment, '$.starts_at') >= ?")
+            args.append(start)
+        if end is not None:
+            where.append("json_extract(r.appointment, '$.starts_at') < ?")
+            args.append(end)
+        order = {"newest": "r.created_at DESC, r.rowid DESC", "soonest": "json_extract(r.appointment, '$.starts_at') ASC, r.rowid DESC", "latest": "json_extract(r.appointment, '$.starts_at') DESC, r.rowid DESC"}[sort]
+        rows = self.store.q("SELECT r.id, r.created_at, r.status, r.requester_name, r.appointment FROM requests r LEFT JOIN request_archives a ON a.request_id=r.id WHERE " + " AND ".join(where) + " ORDER BY " + order + " LIMIT 100", tuple(args))
         for row in rows:
             row["appointment"] = json.loads(row["appointment"])
         return rows
+
+    def archive_request(self, rid: str, archived: bool) -> None:
+        with self.store.tx():
+            self._req(rid)
+            if archived:
+                self.store.x("INSERT OR IGNORE INTO request_archives(request_id, archived_at) VALUES (?, ?)", (rid, self.clock()))
+            else:
+                self.store.x("DELETE FROM request_archives WHERE request_id=?", (rid,))
 
     def _requester(self, token: str) -> dict:
         row = self.store.one("SELECT * FROM requests WHERE token=?", (token,))

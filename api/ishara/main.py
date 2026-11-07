@@ -8,7 +8,8 @@ import logging
 import secrets
 import time
 from contextlib import asynccontextmanager
-from typing import Optional
+from datetime import date, datetime, time as daytime
+from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,10 +19,11 @@ from .config import Settings
 from .db import Store
 from .dispatcher import Conflict, Dispatcher, NotFound
 from .llm import LLM
-from .models import AcknowledgeIn, ApprovalIn, ArrivalIn, CompleteIn, OperatorLoginIn, RequestIn
+from .models import AcknowledgeIn, ApprovalIn, ArchiveIn, ArrivalIn, CompleteIn, OperatorLoginIn, RequestIn, RequestStatus
 from .places import PLACES
 from .seed import seed
 from .telegram import Telegram
+from .timefmt import DUBAI
 
 log = logging.getLogger("ishara")
 # Any localhost or private-network origin, so the demo works from a phone on the same Wi-Fi.
@@ -137,8 +139,17 @@ def create_app(cfg: Optional[Settings] = None) -> FastAPI:
         return d.snapshot(d.create_request(body.text, body.requester_name), ops=False)
 
     @app.get("/api/requests", dependencies=[Depends(operator)])
-    def requests() -> list:
-        return d.recent_requests()
+    def requests(archived: bool = False, q: str = Query(default="", max_length=120), status: Optional[RequestStatus] = None, date_from: Optional[date] = None, date_to: Optional[date] = None, sort: Literal["newest", "soonest", "latest"] = "newest") -> list:
+        if date_from and date_to and date_from > date_to:
+            raise HTTPException(422, "The end date must be on or after the start date.")
+        start = datetime.combine(date_from, daytime.min, DUBAI).timestamp() if date_from else None
+        end = datetime.combine(date_to, daytime.min, DUBAI).timestamp() + 86400 if date_to else None
+        return d.recent_requests(archived, q.strip(), status, start, end, sort)
+
+    @app.post("/api/requests/{rid}/archive", dependencies=[Depends(operator)])
+    def archive(rid: str, body: ArchiveIn) -> dict:
+        d.archive_request(rid, body.archived)
+        return {"ok": True}
 
     @app.get("/api/requests/latest", dependencies=[Depends(operator)])
     def latest() -> Optional[dict]:

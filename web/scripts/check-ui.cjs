@@ -79,3 +79,31 @@ console.log('UI self-checks passed: saved preference validation, Dubai date conv
   assert.equal(sources[1].closed, true);
   console.log('Live UI self-checks passed: scoped stream, stale response rejection, and disabled session cleanup.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
+
+const history = load('request-history.ts');
+const saved = new Map();
+global.localStorage = { getItem: key => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
+history.rememberRequest('first-token');
+history.rememberRequest('second-token');
+assert.equal(history.archiveRequest('first-token', true), true);
+assert.deepEqual(history.archivedRequestTokens(), ['first-token']);
+assert.equal(history.archiveRequest('first-token', false), true);
+assert.deepEqual(history.requestTokens(), ['second-token', 'first-token']);
+history.archiveRequest('first-token', true);
+assert.equal(history.forgetRequest('first-token'), true);
+assert.deepEqual(history.archivedRequestTokens(), []);
+saved.set('ishara.requests.archived', '[null,"valid-token","../invalid","valid-token"]');
+assert.deepEqual(history.archivedRequestTokens(), ['valid-token']);
+const entries = [
+  { id: 'first', created_at: 1, requester_name: 'Layla', status: 'dispatching', appointment: { entity: 'Rashid Hospital', area: 'Oud Metha', starts_at: Date.parse('2026-11-11T20:00:00Z') / 1000 } },
+  { id: 'second', created_at: 2, requester_name: 'Amna', status: 'completed', appointment: { entity: 'School', area: 'Al Barsha', starts_at: Date.parse('2026-11-12T20:00:00Z') / 1000 } },
+];
+assert.deepEqual(history.filterHistory(entries, { ...history.HISTORY_FILTERS, query: 'RASHID', status: 'dispatching', from: '2026-11-12', to: '2026-11-12' }).map(row => row.id), ['first']);
+assert.deepEqual(history.filterHistory(entries, { ...history.HISTORY_FILTERS, sort: 'soonest' }).map(row => row.id), ['first', 'second']);
+assert.deepEqual(history.filterHistory(entries, { ...history.HISTORY_FILTERS }).map(row => row.id), ['second', 'first']);
+assert.equal(history.filterHistory(entries, { ...history.HISTORY_FILTERS, status: 'escalated' }).length, 0);
+assert.equal(history.filterHistory(entries, { ...history.HISTORY_FILTERS, query: 'oud metha' }).length, 1);
+assert.equal(entries[0].id, 'first');
+global.localStorage.setItem = () => { throw new Error('Blocked storage'); };
+assert.equal(history.archiveRequest('second-token', true), false);
+console.log('History self-checks passed: archive/restore, private link removal, filters, Dubai dates, and sort order.');

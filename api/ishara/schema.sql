@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS requests (
   summary        TEXT
 );
 
+CREATE TABLE IF NOT EXISTS request_archives (
+  request_id  TEXT PRIMARY KEY REFERENCES requests(id) ON DELETE CASCADE,
+  archived_at REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS offers (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   request_id     TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,

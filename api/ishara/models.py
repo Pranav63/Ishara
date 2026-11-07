@@ -7,6 +7,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .places import PLACES
 
 Domain = Literal["medical", "legal", "government", "education", "other"]
+RequestStatus = Literal["parsing", "reviewing", "dispatching", "confirmed", "replanning", "escalated", "completed"]
+
+
+class ArchiveIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    archived: bool = Field(strict=True)
 
 
 class Appointment(BaseModel):
