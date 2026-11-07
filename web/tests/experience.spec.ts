@@ -16,7 +16,7 @@ async function mockService(page: Page) {
   await page.route("https://tiles.openfreemap.org/**", route => route.abort());
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
-    const data = path === "/api/operator/session" ? { authenticated: true, demo: true }
+    const data = path === "/api/requests" && route.request().method() === "GET" ? [request] : path === "/api/operator/session" ? { authenticated: true, demo: true }
       : path === "/api/config" ? { demo: true, operator_auth_required: false, llm: "Rules only", languages: ["UAE Sign Language"], domains: ["medical"] }
       : path === "/api/metrics" ? { requests: 1, filled: 1, median_confirm_s: 2, replans: 0 }
       : path === "/api/places" ? {}
@@ -32,9 +32,9 @@ async function openMenu(page: Page, lang = "en") {
 }
 
 async function coordinatorView(page: Page, lang = "en") {
-  await openMenu(page, lang);
-  await page.getByRole("button", { name: lang === "ar" ? "المنسق" : "Coordinator", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: lang === "ar" ? "القائمة" : "Menu", exact: true })).toBeHidden();
+  const coordinator = page.getByRole("button", { name: lang === "ar" ? "المنسق" : "Coordinator", exact: true });
+  await coordinator.click();
+  await expect(coordinator).toHaveAttribute("aria-pressed", "true");
 }
 
 async function openSettings(page: Page, lang = "en") {
@@ -44,13 +44,130 @@ async function openSettings(page: Page, lang = "en") {
 
 test.beforeEach(async ({ page }) => { await mockService(page); });
 
+test("requester history retains private links across new requests and reloads", async ({ page }) => {
+  const earlier = { ...request, id: "earlier", token: "earlier-token", status: "dispatching", appointment: { ...request.appointment, entity: "Dubai school" } };
+  await page.route("**/api/r/earlier-token", route => route.fulfill({ json: earlier }));
+  await page.goto("/r/earlier-token");
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ishara.requests") ?? "[]"))).toEqual(["earlier-token"]);
+  await page.getByRole("link", { name: "Home", exact: true }).click();
+  await page.getByLabel("Your appointment message", { exact: true }).fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
+  await page.getByRole("button", { name: "Review appointment", exact: true }).click();
+  await expect(page).toHaveURL(/\/r\/preview-token$/);
+  await page.reload();
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  const history = page.getByRole("dialog", { name: "Your requests", exact: true });
+  await expect(history.getByRole("link")).toHaveCount(2);
+  await expect(history.getByRole("link", { name: /Dubai school/ })).toHaveAttribute("href", "/r/earlier-token");
+  await expect(history).toContainText("Finding an interpreter");
+  await history.getByRole("button", { name: "Remove Dubai school from this browser", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(1);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("ishara.requests")!))).toEqual(["preview-token"]);
+});
+
+test("blocked browser storage never claims a private link was saved or removed", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("ishara.requests", JSON.stringify(["preview-token"]));
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      if (key === "ishara.requests") throw new DOMException("Storage blocked", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  await page.goto("/r/preview-token");
+  await expect(page.locator("main").getByRole("alert")).toContainText("could not save your link");
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  const history = page.getByRole("dialog", { name: "Your requests", exact: true });
+  await history.getByRole("button", { name: "Remove Rashid Hospital from this browser", exact: true }).click();
+  await expect(history.getByRole("alert")).toContainText("could not be removed");
+  await expect(history.getByRole("link")).toHaveCount(1);
+});
+
+test("production coordinator shows read-only interpreter responses", async ({ page }) => {
+  await page.route("**/api/config", route => route.fulfill({ json: { demo: false, operator_auth_required: true } }));
+  await page.route("**/api/requests/latest", route => route.fulfill({ json: { ...request, status: "dispatching", offers: [{ id: 1, interpreter_id: "one", status: "pending", expires_at: request.now + 300, sent_at: request.now, wave: 1, reasons: ["certified"] }] } }));
+  await page.route("**/api/interpreters", route => route.fulfill({ json: [{ id: "one", name: "Mariam A.", token: "private-invite" }] }));
+  await page.goto("/");
+  await coordinatorView(page);
+  await expect(page.locator(".dock")).toContainText("Awaiting interpreter response");
+  await expect(page.locator(".dock").getByRole("button", { name: "Accept", exact: true })).toHaveCount(0);
+  await expect(page.locator(".dock").getByRole("button", { name: "Decline", exact: true })).toHaveCount(0);
+});
+
+test("coordinator can resume older pending work and polling keeps that selection", async ({ page }) => {
+  await page.clock.install();
+  const earlier = { ...request, id: "earlier", requester_name: "Earlier resident", status: "reviewing" };
+  await page.route("**/api/requests", route => route.fulfill({ json: [request, earlier] }));
+  await page.route("**/api/requests/earlier", route => route.fulfill({ json: earlier }));
+  await page.goto("/");
+  await coordinatorView(page);
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  const history = page.getByRole("dialog", { name: "Recent requests", exact: true });
+  await history.getByRole("button", { name: /Needs your review/ }).click();
+  await expect(history).toBeHidden();
+  await expect(page.locator(".sheet-head h2")).toHaveText("Earlier resident");
+  await page.clock.fastForward(4000);
+  await expect(page.locator(".sheet-head h2")).toHaveText("Earlier resident");
+  await page.getByRole("button", { name: "New request", exact: true }).click();
+  await expect(page.locator(".request-form")).toContainText("Your previous request stays active");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.locator(".sheet-head h2")).toHaveText("Earlier resident");
+});
+
+test("repeated form submissions send one create request and a failed draft survives", async ({ page }) => {
+  let submissions = 0;
+  let release!: () => void;
+  const response = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/requests", async route => {
+    submissions++;
+    await response;
+    await route.fulfill({ status: 503, json: { detail: "Please retry" } });
+  });
+  await page.goto("/");
+  await page.getByLabel("Your appointment message", { exact: true }).fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
+  await expect(page.getByRole("button", { name: "Review appointment", exact: true })).toBeEnabled();
+  await page.locator(".request-form").evaluate(form => { (form as HTMLFormElement).requestSubmit(); (form as HTMLFormElement).requestSubmit(); });
+  await expect.poll(() => submissions).toBe(1);
+  release();
+  await expect(page.locator(".request-form").getByRole("alert")).toHaveText("Please retry");
+  await expect(page.getByLabel("Your appointment message", { exact: true })).toHaveValue(/Rashid Hospital/);
+  expect(submissions).toBe(1);
+});
+
+test("offer explanations stay in the viewport and simultaneous demo actions send one response", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 500 });
+  const offers = [1, 2].map(id => ({ id, request_id: request.id, interpreter_id: String(id), status: "pending", role: "primary", wave: 1, sent_at: request.now, expires_at: request.now + 300, travel_min: 8, reasons: ["8 min away", "certified", "medical experience"] }));
+  let responded = false;
+  let submissions = 0;
+  let release!: () => void;
+  const response = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/requests/latest", route => route.fulfill({ json: { ...request, status: responded ? "confirmed" : "dispatching", offers: responded ? [] : offers } }));
+  await page.route("**/api/interpreters", route => route.fulfill({ json: [{ id: "1", name: "Mariam A.", token: "one" }, { id: "2", name: "Omar K.", token: "two" }] }));
+  await page.route("**/offers/*/accept", async route => { submissions++; await response; responded = true; await route.fulfill({ json: { ok: true } }); });
+  await page.goto("/");
+  await coordinatorView(page);
+  await page.getByRole("button", { name: "Why Mariam A.", exact: true }).click();
+  const detail = page.getByRole("dialog", { name: "Why Mariam A.", exact: true });
+  await expect(detail).toContainText("Medical experience");
+  const bounds = (await detail.boundingBox())!;
+  expect(bounds.y).toBeGreaterThanOrEqual(16);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(484);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Why Mariam A.", exact: true })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Accept", exact: true }).first()).toBeEnabled();
+  await page.getByRole("button", { name: "Accept", exact: true }).evaluateAll(buttons => buttons.forEach(button => (button as HTMLButtonElement).click()));
+  await expect.poll(() => submissions).toBe(1);
+  release();
+  await expect(page.getByRole("button", { name: "Accept", exact: true })).toHaveCount(0);
+  expect(submissions).toBe(1);
+});
+
 for (const lang of ["en", "ar"]) for (const size of [0, 2]) {
   test(`coordinator header reflows without collisions (${lang}, text size ${size})`, async ({ page }) => {
     await page.addInitScript(prefs => localStorage.setItem("ishara.prefs", JSON.stringify(prefs)), { lang, size, theme: "dark" });
     await page.goto("/");
     await coordinatorView(page, lang);
     await expect(page.locator(".progress")).toBeVisible();
-    await expect(page.locator(".header-main").getByRole("button")).toHaveCount(2);
+    await expect(page.locator(".header-main").getByRole("button")).toHaveCount(5);
     for (const width of [320, 390, 768, 1024, 1181, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
       await expect.poll(() => page.evaluate(() => {
@@ -72,7 +189,7 @@ for (const lang of ["en", "ar"]) for (const size of [0, 2]) {
       });
       expect(collisions, `${width}px`).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px overflow`).toBe(true);
-      if (size === 0) await expect.poll(async () => (await page.locator(".header-main").boundingBox())!.height, { message: `${width}px compact toolbar` }).toBeLessThanOrEqual(56);
+      if (size === 0) await expect.poll(async () => (await page.locator(".header-main").boundingBox())!.height, { message: `${width}px compact toolbar` }).toBeLessThanOrEqual(width <= 899 ? 104 : 56);
     }
   });
 }
@@ -236,7 +353,7 @@ test("welcome animation respects motion and text-first preferences", async ({ pa
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
-  await expect(page.locator(".welcome-ink")).toHaveCSS("animation-name", "welcome-connect");
+  await expect(page.locator(".welcome-ink").first()).toHaveCSS("animation-name", "welcome-connect");
   await page.evaluate(() => document.fonts.ready);
   const guide = page.locator(".welcome-guide");
   const initialBounds = await guide.boundingBox();
@@ -258,7 +375,7 @@ test("welcome animation respects motion and text-first preferences", async ({ pa
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");
   await page.getByLabel("Reduce motion", { exact: true }).check();
-  await expect(page.locator(".welcome-ink")).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".welcome-ink").first()).toHaveCSS("animation-name", "none");
   await expect(page.locator(".welcome-step").first()).toHaveCSS("animation-name", "none");
   await expect(page.locator(".resident-flow li").first()).toHaveCSS("animation-name", "none");
   await page.getByLabel("Text-first mode", { exact: true }).check();
@@ -298,6 +415,7 @@ test("a new submission uses its own status while the latest snapshot catches up"
   let latest = request;
   await page.route("**/api/requests/latest", route => route.fulfill({ json: latest }));
   await page.route("**/api/requests", route => route.fulfill({ json: created }));
+  await page.route("**/api/requests/new-request", route => route.fulfill({ json: latest.id === created.id ? latest : created }));
   await page.goto("/");
   await coordinatorView(page);
   await page.getByRole("button", { name: "New request", exact: true }).click();
@@ -386,8 +504,6 @@ test("workspace menu is keyboard accessible and returns focus after actions", as
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Close menu", exact: true })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Requester view", exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Activity & support", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
@@ -527,8 +643,7 @@ test("demo reset stays behind confirmation and the menu retains presentation and
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   await expect.poll(() => resets).toBe(1);
   await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
-  await openMenu(page);
-  await page.getByRole("button", { name: "Requester view", exact: true }).click();
+  await page.getByRole("button", { name: "Requester", exact: true }).click();
   await expect(page.locator(".resident-intro")).toBeVisible();
 });
 

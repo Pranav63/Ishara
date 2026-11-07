@@ -8,6 +8,7 @@ import { AgentCompanion } from "@/components/AgentCompanion";
 import { useLanguage } from "@/components/Preferences";
 import { ReviewAppointment } from "@/components/ReviewAppointment";
 import { Thread } from "@/components/Thread";
+import { rememberRequest } from "@/lib/request-history";
 import { api } from "@/lib/api";
 import { SAMPLES, STATUS } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
@@ -17,6 +18,7 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
   const [min, setMin] = useState(false);
   const [text, setText] = useState("");
   const [name, setName] = useState("");
+  const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const messageField = useRef<HTMLTextAreaElement>(null);
@@ -34,16 +36,18 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (availability !== "online" || busy) return;
+    if (availability !== "online" || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true); setErr(null);
     try {
       const created = await api.create(text.trim(), name.trim());
+      rememberRequest(created.token);
       setText(""); onCreated(created);
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setErr((e as Error).message); } finally { inFlight.current = false; setBusy(false); }
   }
   return <m.section className={`sheet glass strong${min && !showForm ? " min" : ""}${showForm ? " is-composing" : ""}`} aria-label={t("Request an interpreter", "اطلب مترجماً")} layout transition={{ type: "spring", stiffness: 400, damping: 38 }}>
     <div className="sheet-head">
-      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Your space", "مساحتك")}</p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Request an interpreter", "اطلب مترجماً")}</h2>{showForm && <p id="msg-help">{t("Paste your SMS or email", "ألصق رسالة الموعد أو البريد")}</p>}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Your space", "مساحتك")}</p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Request an interpreter", "اطلب مترجماً")}</h2>{showForm && <label htmlFor="msg">{t("Your appointment message", "رسالة موعدك")}</label>}</div>
       {showForm && <AgentCompanion compact busy={busy} />}
       {compose && <button type="button" className="request-cancel" onClick={() => { restoreFocus.current = true; onComposeChange?.(false); setErr(null); }}>{t("Cancel", "إلغاء")}</button>}
       {snap && !showForm && <button className="icon-btn" aria-label={min ? t("Expand conversation", "توسيع المحادثة") : t("Collapse conversation", "طي المحادثة")} aria-expanded={!min} onClick={() => setMin((v) => !v)}><m.span animate={{ rotate: min ? 180 : 0 }} style={{ display: "inline-flex" }}><ChevronDown size={18} aria-hidden /></m.span></button>}
@@ -58,8 +62,8 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
       {snap?.status === "reviewing" && !showForm ? <div className="review-scroll"><ReviewAppointment key={snap.id} snap={snap} onDone={() => onCreated()} /></div> : snap && !showForm ? <Thread snap={snap} /> : null}
       {snap && composer && !compose && <div className="compose-bar"><Link className="btn small" href={`/r/${snap.token}`}><ArrowUpRight size={16} aria-hidden />{t("My appointment", "موعدي")}</Link><button ref={newRequestButton} className="btn small" onClick={() => { onComposeChange?.(true); setErr(null); }}><Plus size={16} aria-hidden />{t("New request", "طلب جديد")}</button></div>}
       {showForm && <form className="composer request-form" onSubmit={submit} aria-busy={busy}>
-        <label htmlFor="msg">{t("Your appointment message", "رسالة موعدك")}</label>
-        <textarea ref={messageField} id="msg" name="message" autoComplete="off" aria-describedby="msg-help" dir="auto" rows={5} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Place, date and time…", "المكان، والتاريخ، والوقت…")} />
+        {snap && compose && snap.status !== "completed" && <p className="small muted">{t("Your previous request stays active. Find it in Requests.", "يبقى طلبك السابق نشطاً. يمكنك الرجوع إليه من الطلبات.")}</p>}
+        <textarea ref={messageField} id="msg" name="message" autoComplete="off" dir="auto" rows={4} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Paste your SMS or email…", "ألصق رسالة الموعد أو البريد…")} />
         <div className="request-extras">
           <details className="request-examples" name="request-extras"><summary><span>{t("Examples", "أمثلة")}</span><ChevronDown size={16} aria-hidden /></summary><div className="request-extra-body samples" role="group" aria-label={t("Try an example", "جرب مثالاً")}>{SAMPLES.map((s, i) => <button type="button" key={s.label} className="sample" onClick={(e) => { setText(s.text); e.currentTarget.closest("details")?.removeAttribute("open"); messageField.current?.focus(); }}>{labels[i]}</button>)}</div></details>
           <details className="optional-name" name="request-extras"><summary><span>{t("Name", "الاسم")} <span className="optional-hint">{t("(optional)", "(اختياري)")}</span></span><ChevronDown size={16} aria-hidden /></summary><div className="request-extra-body"><label className="sr-only" htmlFor="requester-name">{t("Your name", "اسمك")}</label><input id="requester-name" name="name" autoComplete="given-name" dir="auto" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Your name", "اسمك")} /></div></details>

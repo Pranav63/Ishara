@@ -25,6 +25,8 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T,>(path: string, body?: unknown) => call<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const api = {
+  requests: () => call<Pick<Snapshot, "id" | "created_at" | "status" | "requester_name" | "appointment">[]>("/api/requests"),
+  request: (id: string) => call<Snapshot>(`/api/requests/${encodeURIComponent(id)}`),
   latest: () => call<Snapshot | null>("/api/requests/latest"),
   interpreters: () => call<Interp[]>("/api/interpreters"),
   metrics: () => call<Metrics>("/api/metrics"),

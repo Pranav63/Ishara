@@ -350,8 +350,14 @@ class Dispatcher:
         return out
 
     def latest(self) -> Optional[dict]:
-        row = self.store.one("SELECT id FROM requests ORDER BY created_at DESC LIMIT 1")
+        row = self.store.one("SELECT id FROM requests ORDER BY created_at DESC, rowid DESC LIMIT 1")
         return self.snapshot(row["id"]) if row else None
+
+    def recent_requests(self) -> list:
+        rows = self.store.q("SELECT id, created_at, status, requester_name, appointment FROM requests ORDER BY created_at DESC, rowid DESC LIMIT 100")
+        for row in rows:
+            row["appointment"] = json.loads(row["appointment"])
+        return rows
 
     def _requester(self, token: str) -> dict:
         row = self.store.one("SELECT * FROM requests WHERE token=?", (token,))

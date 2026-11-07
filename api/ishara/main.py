@@ -136,6 +136,10 @@ def create_app(cfg: Optional[Settings] = None) -> FastAPI:
     def create(body: RequestIn) -> dict:
         return d.snapshot(d.create_request(body.text, body.requester_name), ops=False)
 
+    @app.get("/api/requests", dependencies=[Depends(operator)])
+    def requests() -> list:
+        return d.recent_requests()
+
     @app.get("/api/requests/latest", dependencies=[Depends(operator)])
     def latest() -> Optional[dict]:
         return d.latest()

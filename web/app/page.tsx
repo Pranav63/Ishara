@@ -1,9 +1,11 @@
 "use client";
 
-import { Activity, ArrowRight, CircleHelp, Hand, Menu, Play, Settings2, Users, X } from "lucide-react";
+import { Activity, ArrowRight, CircleHelp, Hand, Menu, Play, Settings2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { m } from "motion/react";
+import { RequestHistory } from "@/components/RequestHistory";
 import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/components/Chrome";
 import { Header } from "@/components/Header";
@@ -20,8 +22,8 @@ import { api, type OperatorSession } from "@/lib/api";
 import { useLive, useNow } from "@/lib/live";
 import type { Snapshot } from "@/lib/types";
 
-async function load() {
-  const [snap, interpreters, metrics, config, places, escalations] = await Promise.all([api.latest(), api.interpreters(), api.metrics(), api.config(), api.places(), api.escalations()]);
+async function load(requestId: string | null) {
+  const [snap, interpreters, metrics, config, places, escalations] = await Promise.all([requestId ? api.request(requestId) : api.latest(), api.interpreters(), api.metrics(), api.config(), api.places(), api.escalations()]);
   return { snap, interpreters, metrics, config, places, escalations };
 }
 
@@ -35,6 +37,7 @@ export default function Console() {
   const [compose, setCompose] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [created, setCreated] = useState<Snapshot | null>(null);
   const checkService = useCallback(() => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setServiceState("online"); }).catch(() => setServiceState("offline")), []);
   useEffect(() => {
@@ -44,7 +47,8 @@ export default function Console() {
   }, [checkService]);
   function retryService() { setServiceState("checking"); checkService(); }
   const coordinator = mode === "coordinator" && session?.authenticated === true;
-  const { data, error, refresh } = useLive(load, { enabled: coordinator });
+  const { data, error, refresh } = useLive(() => load(selectedId), { enabled: coordinator });
+  useEffect(() => { if (selectedId) refresh(); }, [selectedId, refresh]);
   useEffect(() => { if (!coordinator) { setCompose(false); setCreated(null); } }, [coordinator]);
   useEffect(() => { if (created && data?.snap?.id === created.id) setCreated(null); }, [created, data?.snap]);
   const [drawer, setDrawer] = useState(false);
@@ -57,27 +61,30 @@ export default function Console() {
   const online = availability === "online";
 
   return <MotionRoot><div className={`${coordinator ? "console-view" : "resident-home"}${drawer ? " drawer-open" : ""}`}>
-    <Header status={coordinator ? activeSnap?.status : undefined}>
+    <Header status={coordinator ? activeSnap?.status : undefined} navigation={<>
+      {session?.authenticated && <div className="workspace-switch" role="group" aria-label={t("Workspace", "مساحة العمل")}>
+        {(["resident", "coordinator"] as const).map(value => <button type="button" key={value} aria-pressed={mode === value} onClick={() => { setMode(value); setDrawer(false); }}>{mode === value && <m.span className="workspace-selection" layoutId="workspace-selection" transition={{ duration: .22, ease: [.22, 1, .36, 1] }} />}<span>{value === "resident" ? t("Requester", "طالب الخدمة") : t("Coordinator", "المنسق")}</span></button>)}
+      </div>}
+      <RequestHistory key={coordinator ? "coordinator" : "requester"} coordinator={coordinator} onSelect={value => { setCreated(value); setSelectedId(value.id); setCompose(false); setDrawer(false); }} />
+    </>}>
       <LanguageToggle />
       <Popover label={t("Menu", "القائمة")} align="end" trigger={<span className="btn small menu-toggle"><Menu size={18} aria-hidden />{t("Menu", "القائمة")}</span>}>
         {(close) => <div className="workspace-menu">
           <div className="workspace-menu-head"><div><h2>{coordinator ? t("Coordinator", "المنسق") : t("Ishara", "إشارة")}</h2><Connection online={online} /></div><button type="button" className="icon-btn" aria-label={t("Close menu", "إغلاق القائمة")} onClick={close}><X size={18} aria-hidden /></button></div>
-          {session?.authenticated && !coordinator && <p className="workspace-label">{t("Staff tools", "أدوات الموظفين")}</p>}
           <div className="workspace-actions">
-            {session?.authenticated && <button type="button" onClick={() => { setMode(coordinator ? "resident" : "coordinator"); close(); }}><Users size={18} aria-hidden />{coordinator ? t("Requester view", "عرض طالب الخدمة") : t("Coordinator", "المنسق")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></button>}
             {coordinator && <button type="button" onClick={() => { close(); setDrawer(true); }}><Activity size={18} aria-hidden />{t("Activity & support", "النشاط والدعم")}{events.length > 0 && <span className="workspace-count num">{events.length}</span>}</button>}
             {coordinator && data?.config.demo && <Link href="/stage" onClick={close}><Play size={18} aria-hidden />{t("Presentation", "العرض التقديمي")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></Link>}
             <button type="button" aria-haspopup="dialog" onClick={() => { close(); setSettingsOpen(true); }}><Settings2 size={18} aria-hidden />{t("Display & accessibility", "العرض وإمكانية الوصول")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></button>
             <button type="button" aria-haspopup="dialog" onClick={() => { close(); setHelpOpen(true); }}><CircleHelp size={18} aria-hidden />{t("How Ishara works", "كيف تعمل إشارة")}<ArrowRight className="workspace-arrow" size={16} aria-hidden /></button>
           </div>
-          <div className="workspace-session"><OperatorAccess session={session} authRequired={authRequired} onChange={(s) => { setSession(s); setServiceState("online"); if (s.authenticated) setMode("coordinator"); close(); }} />{coordinator && data?.config.demo && <ResetButton onDone={() => { setCreated(null); setCompose(false); refresh(); close(); }} />}</div>
+          <div className="workspace-session"><OperatorAccess session={session} authRequired={authRequired} onChange={(s) => { setSession(s); setServiceState("online"); if (s.authenticated) setMode("coordinator"); close(); }} />{coordinator && data?.config.demo && <ResetButton onDone={() => { setCreated(null); setSelectedId(null); setCompose(false); refresh(); close(); }} />}</div>
         </div>}
       </Popover>
     </Header>
     <DisplaySettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     <HowItWorks open={helpOpen} onClose={() => setHelpOpen(false)} />
     {coordinator && <OfflineBanner online={availability !== "offline"} />}
-    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setCompose(false); } refresh(); }} />{!compose && <OfferDock snap={snap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
+    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
       <section className="resident-intro">
         <div className="service-label"><Hand size={18} aria-hidden />{t("Appointments · Dubai", "المواعيد · دبي")}</div>
         <h1>{t("Sign language support", "دعم بلغة الإشارة")} <span>{t("for your appointment", "لموعدك")}</span></h1>

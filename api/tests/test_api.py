@@ -20,3 +20,15 @@ def test_api_flow(cfg):
         assert view["status"] == "confirmed" and "offers" not in view
         assert c.get("/api/i/nope").status_code == 404
         assert c.get("/api/requests/latest").json()["id"] == snap["id"]
+
+
+def test_recent_requests_keeps_older_pending_work_and_excludes_private_links(cfg):
+    with TestClient(create_app(cfg)) as c:
+        first = c.post("/api/requests", json={"text": MEDICAL, "requester_name": "First"}).json()
+        second = c.post("/api/requests", json={"text": MEDICAL, "requester_name": "Second"}).json()
+        assert c.get("/api/requests/latest").json()["id"] == second["id"]
+        rows = c.get("/api/requests").json()
+        assert [row["id"] for row in rows] == [second["id"], first["id"]]
+        assert all(row["status"] == "reviewing" for row in rows)
+        assert all(set(row) == {"id", "created_at", "status", "requester_name", "appointment"} for row in rows)
+        assert c.get(f"/api/requests/{first['id']}").json()["id"] == first["id"]

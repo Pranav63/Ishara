@@ -93,3 +93,26 @@ def test_metrics_time_to_confirm(d, clock):
     d.respond(tokens(d)[o["interpreter_id"]], o["id"], True)
     m = d.metrics()
     assert m["filled"] == 1 and m["median_confirm_s"] == 7.0
+
+
+def test_simultaneous_acceptances_confirm_exactly_one_interpreter(d):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    rid = create_approved(d, MEDICAL)
+    pending = offers(d, rid, "pending")
+    roster = tokens(d)
+    ready = Barrier(2)
+
+    def accept(offer):
+        ready.wait()
+        try:
+            d.respond(roster[offer["interpreter_id"]], offer["id"], True)
+            return "accepted"
+        except Conflict:
+            return "conflict"
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert sorted(pool.map(accept, pending[:2])) == ["accepted", "conflict"]
+    assert len(offers(d, rid, "accepted")) == 1
+    assert len(offers(d, rid, "withdrawn")) == 1

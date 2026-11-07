@@ -70,7 +70,7 @@ def test_operator_auth_protects_private_views_and_uses_httponly_cookie(cfg):
     with TestClient(app) as c:
         snap = c.post("/api/requests", json={"text": MEDICAL}).json()
         assert "offers" not in snap and "events" not in snap and "briefing" not in snap
-        paths = ["/api/interpreters", "/api/metrics", "/api/requests/latest", f"/api/requests/{snap['id']}", "/api/escalations", "/api/stream"]
+        paths = ["/api/requests", "/api/interpreters", "/api/metrics", "/api/requests/latest", f"/api/requests/{snap['id']}", "/api/escalations", "/api/stream"]
         assert all(c.get(path).status_code == 401 for path in paths)
         assert c.post("/api/demo/reset").status_code == 401
         assert c.post(f"/api/escalations/{snap['id']}/acknowledge", json={"note": ""}).status_code == 401

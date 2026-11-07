@@ -43,7 +43,7 @@ export function useLive<T>(load: () => Promise<T>, options: { requesterToken?: s
 export function useNow(serverNow?: number) {
   const offset = useRef(0);
   const [now, setNow] = useState(() => Date.now() / 1000);
-  useEffect(() => { if (serverNow) offset.current = serverNow - Date.now() / 1000; }, [serverNow]);
+  useEffect(() => { if (serverNow) { offset.current = serverNow - Date.now() / 1000; setNow(serverNow); } }, [serverNow]);
   useEffect(() => { const id = setInterval(() => setNow(Date.now() / 1000 + offset.current), 250); return () => clearInterval(id); }, []);
   return now;
 }

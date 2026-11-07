@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ShieldCheck } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { AgentCompanion } from "@/components/AgentCompanion";
 import { useLanguage } from "@/components/Preferences";
 import { api } from "@/lib/api";
@@ -9,12 +9,13 @@ import { areaName } from "@/lib/locale";
 import { dubaiEpoch, dubaiInputValue } from "@/lib/review";
 import type { Snapshot } from "@/lib/types";
 
-export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Snapshot; onDone: () => void; primary?: boolean }) {
+export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Snapshot; onDone: () => void | Promise<void>; primary?: boolean }) {
   const { t, lang } = useLanguage();
   const id = useId();
   const Heading = primary ? "h1" : "h2";
   const [places, setPlaces] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [entity, setEntity] = useState(snap.appointment.entity);
   const [area, setArea] = useState(snap.appointment.area);
@@ -25,11 +26,14 @@ export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Sna
   useEffect(() => { api.places().then((p) => setPlaces(Object.keys(p))).catch(() => setError(t("Could not load supported areas. Try reloading.", "تعذر تحميل المناطق المتاحة. أعد تحميل الصفحة."))); }, []);
 
   async function submit(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setError(null);
+    e.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true); setError(null);
     try {
       await api.approve(snap.token, { entity, area, starts_at: dubaiEpoch(starts), duration_min: duration, domain, language });
-      onDone();
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+      await onDone();
+    } catch (e) { setError((e as Error).message); } finally { inFlight.current = false; setBusy(false); }
   }
   return <form className="appointment-review" onSubmit={submit} aria-labelledby={`${id}-heading`}>
     <div className="review-heading"><div><Heading id={`${id}-heading`}>{t("Review your appointment", "راجع موعدك")}</Heading><p className="small muted">{t("Check the details before we look for an interpreter. Times are in Dubai time (UTC+4).", "راجع التفاصيل قبل البحث عن مترجم. الأوقات بتوقيت دبي (UTC+4).")}</p></div>{primary && <AgentCompanion status="reviewing" compact />}</div>

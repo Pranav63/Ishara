@@ -30,7 +30,7 @@ export function Progress({ status }: { status?: Status }) {
   );
 }
 
-export function Header({ status, children }: { status?: Status; children: React.ReactNode }) {
+export function Header({ status, children, navigation }: { status?: Status; children: React.ReactNode; navigation?: React.ReactNode }) {
   const { t } = useLanguage();
   const ref = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
@@ -51,6 +51,7 @@ export function Header({ status, children }: { status?: Status; children: React.
           <span className="brand-name" translate="no">Ishara</span>
           <span className="brand-ar" lang="ar" aria-hidden>إشارة</span>
         </Link>
+        {navigation && <div className="header-navigation">{navigation}</div>}
         <div className="header-actions">{children}</div>
       </div>
       {status && <div className="header-status"><Progress status={status} /></div>}

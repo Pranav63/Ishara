@@ -3,6 +3,8 @@
 import { AnimatePresence, m } from "motion/react";
 import { Check, Clock, IdCard, MapPin, RefreshCw, Video, X } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
+import { RequestHistory } from "@/components/RequestHistory";
+import { rememberRequest } from "@/lib/request-history";
 import { MotionRoot } from "@/components/Motion";
 import Link from "next/link";
 import { AgentCompanion } from "@/components/AgentCompanion";
@@ -90,6 +92,8 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   const { token } = use(params);
   const { data, error, refresh } = useLive(() => api.requester(token), { requesterToken: token });
   const { prefs } = usePreferences();
+  const [historySaved, setHistorySaved] = useState(true);
+  useEffect(() => { if (data) setHistorySaved(rememberRequest(data.token)); }, [data?.token]);
   const [staff, setStaff] = useState(false);
   const [failedVideo, setFailedVideo] = useState<string | null>(null);
   const t = T[prefs.lang];
@@ -127,8 +131,9 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           )}
         </AnimatePresence>
 
-        <header className="requester-top"><Link className="brand" href="/" aria-label={t.home}><span className="brand-name" translate="no">Ishara</span><span lang="ar">إشارة</span></Link><DisplaySettings /></header>
+        <header className="requester-top"><Link className="brand" href="/" aria-label={t.home}><span className="brand-name" translate="no">Ishara</span><span lang="ar">إشارة</span></Link><div className="requester-actions"><RequestHistory /><DisplaySettings /></div></header>
         {data.status !== "reviewing" && <AgentCompanion status={data.status} />}
+        {!historySaved && <p className="small error" role="alert">{prefs.lang === "ar" ? "تعذر حفظ الرابط في هذا المتصفح. احتفظ برابط هذه الصفحة للرجوع إلى طلبك." : "This browser could not save your link. Keep this page’s private link to return to your request."}</p>}
         {prefs.textOnly && <p className="small">{t.textHelp}</p>}
         {error && <p className="error" role="alert">{t.offline}</p>}
 

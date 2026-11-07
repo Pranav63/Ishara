@@ -32,7 +32,9 @@ The shared display controls switch the interface between English and Arabic, inc
 
 ## Request review and coordinator queue
 
-The home page is the resident's request form. Submitting opens a private request page for review; after confirmation, the resident follows matching and arrival updates there. Coordinator is a staff workspace in Menu, available after operator sign-in or in explicit demo mode. Residents do not need that workspace to request an interpreter. Help, privacy information and display settings are in Menu.
+The home page is the resident's request form. Submitting opens a private request page for review; after confirmation, the resident follows matching and arrival updates there. A visible Requester / Coordinator switch appears after operator sign-in or in explicit demo mode. The Requests button reopens recent work; the coordinator list includes the 100 most recent requests, and selecting one keeps subsequent live updates scoped to it. Residents do not need that workspace to request an interpreter. Help, privacy information and display settings are in Menu. Accept/decline controls on the map are an explicitly labelled demo simulation; production coordinators wait for replies from interpreters’ private pages.
+
+Requester history stores up to 100 private link tokens in this browser, without appointment text or names. Opening a private request link adds it to this history; it cannot recover links never opened on this browser or sync across devices. The Requests dialog refreshes statuses while open. Removing a saved link does not cancel the appointment or delete server data. These bearer links grant access: remove saved links on shared devices and keep separate browser profiles for different people.
 
 After parsing, requests remain in `reviewing` until the resident confirms the place, Dubai date/time, duration, domain and sign language. The private requester link allows corrections and approval; no interpreter receives an offer before approval. Telegram also requires the requester to confirm the parsed appointment and accepts private chats only; groups and channels cannot create or act on requests.
 
