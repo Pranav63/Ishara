@@ -37,6 +37,7 @@ export const api = {
     return call<HistoryEntry[]>(`/api/requests${params.size ? `?${params}` : ""}`);
   },
   archiveRequest: (id: string, archived: boolean) => post<{ ok: boolean }>(`/api/requests/${encodeURIComponent(id)}/archive`, { archived }),
+  archiveRequests: (request_ids: string[]) => post<{ ok: boolean }>("/api/requests/archive", { request_ids }),
   request: (id: string) => call<Snapshot>(`/api/requests/${encodeURIComponent(id)}`),
   latest: () => call<Snapshot | null>("/api/requests/latest"),
   interpreters: () => call<Interp[]>("/api/interpreters"),

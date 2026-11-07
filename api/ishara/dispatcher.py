@@ -375,12 +375,18 @@ class Dispatcher:
         return rows
 
     def archive_request(self, rid: str, archived: bool) -> None:
+        if archived:
+            self.archive_requests([rid])
+            return
         with self.store.tx():
             self._req(rid)
-            if archived:
+            self.store.x("DELETE FROM request_archives WHERE request_id=?", (rid,))
+
+    def archive_requests(self, request_ids: list[str]) -> None:
+        with self.store.tx():
+            for rid in dict.fromkeys(request_ids):
+                self._req(rid)
                 self.store.x("INSERT OR IGNORE INTO request_archives(request_id, archived_at) VALUES (?, ?)", (rid, self.clock()))
-            else:
-                self.store.x("DELETE FROM request_archives WHERE request_id=?", (rid,))
 
     def _requester(self, token: str) -> dict:
         row = self.store.one("SELECT * FROM requests WHERE token=?", (token,))

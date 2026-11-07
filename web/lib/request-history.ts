@@ -17,10 +17,14 @@ export const requestTokens = () => savedTokens(KEY);
 export const archivedRequestTokens = () => savedTokens(ARCHIVED);
 
 export function archiveRequest(token: string, archived: boolean) {
+  return archiveRequests([token], archived);
+}
+
+export function archiveRequests(tokens: string[], archived = true) {
   try {
     const saved = requestTokens();
-    const tokens = archivedRequestTokens().filter(value => value !== token && saved.includes(value));
-    localStorage.setItem(ARCHIVED, JSON.stringify(archived ? [token, ...tokens].slice(0, 100) : tokens));
+    const remaining = archivedRequestTokens().filter(value => !tokens.includes(value));
+    localStorage.setItem(ARCHIVED, JSON.stringify([...new Set(archived ? [...tokens, ...remaining] : remaining)].filter(value => saved.includes(value)).slice(0, 100)));
     return true;
   } catch { return false; }
 }

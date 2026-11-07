@@ -104,6 +104,10 @@ assert.deepEqual(history.filterHistory(entries, { ...history.HISTORY_FILTERS }).
 assert.equal(history.filterHistory(entries, { ...history.HISTORY_FILTERS, status: 'escalated' }).length, 0);
 assert.equal(history.filterHistory(entries, { ...history.HISTORY_FILTERS, query: 'oud metha' }).length, 1);
 assert.equal(entries[0].id, 'first');
+history.rememberRequest('third-token');
+assert.equal(history.archiveRequests(['second-token', 'third-token']), true);
+assert.deepEqual(history.archivedRequestTokens(), ['second-token', 'third-token']);
 global.localStorage.setItem = () => { throw new Error('Blocked storage'); };
+assert.equal(history.archiveRequests(['second-token', 'third-token']), false);
 assert.equal(history.archiveRequest('second-token', true), false);
 console.log('History self-checks passed: archive/restore, private link removal, filters, Dubai dates, and sort order.');

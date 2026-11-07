@@ -161,7 +161,8 @@ p { margin: 0; text-wrap: pretty; }
 .history-results p, .history-filter-fields p { margin: 0; }
 .history-scope { margin: 4px 0 0; }
 .history-row-actions { display: flex; align-items: center; gap: 4px; padding-block: 8px; }
-.history-row-actions .btn { padding-inline: 8px; }
+.history-list-actions, .history-confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.history-confirm-actions { margin-top: 24px; }
 .request-history-list { list-style: none; margin: 20px 0 0; padding: 0; }
 .request-history-list li { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); }
 .history-request { display: flex; align-items: center; justify-content: space-between; flex: 1; gap: 16px; min-width: 0; min-height: 72px; padding: 16px 4px; border: 0; background: transparent; color: var(--ink); text-align: start; text-decoration: none; font: inherit; cursor: pointer; border-radius: 8px; }
@@ -173,9 +174,6 @@ p { margin: 0; text-wrap: pretty; }
 .history-request svg { flex: none; }
 .history-status { margin-top: 16px; font-size: max(14px, .875rem); }
 @media (max-width: 599px) {
-  .request-history-list li { flex-wrap: wrap; gap: 0; }
-  .history-request { flex-basis: 100%; padding-bottom: 8px; }
-  .history-row-actions { padding: 0 0 12px; width: 100%; justify-content: flex-end; }
   .history-filter-row { gap: 8px; }
 }
 @media (max-width: 399px) {

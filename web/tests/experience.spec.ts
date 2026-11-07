@@ -182,6 +182,64 @@ for (const lang of ["en", "ar"]) test(`request history filters fit a narrow view
   await expect(history).toContainText(lang === "ar" ? "تمت أرشفة الطلب" : "Request archived");
 });
 
+test("requester bulk archive uses only shown rows and cancel changes nothing", async ({ page }) => {
+  const school = { ...request, id: "school", token: "school-token", appointment: { ...request.appointment, entity: "Dubai school" } };
+  await page.addInitScript(() => localStorage.setItem("ishara.requests", JSON.stringify(["preview-token", "school-token"])));
+  await page.route("**/api/r/school-token", route => route.fulfill({ json: school }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  const history = page.getByRole("dialog", { name: "Your requests", exact: true });
+  const icon = history.getByRole("button", { name: "Archive Rashid Hospital", exact: true });
+  await expect(icon).toHaveText("");
+  await expect(icon).toHaveAttribute("title", "Archive request");
+  await history.getByRole("button", { name: "Archive all shown", exact: true }).click();
+  let confirm = page.getByRole("dialog", { name: "Archive 2 requests?", exact: true });
+  await confirm.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(2);
+  expect(await page.evaluate(() => localStorage.getItem("ishara.requests.archived"))).toBeNull();
+  await history.getByLabel("Search requests", { exact: true }).fill("school");
+  await expect(history.getByRole("link")).toHaveCount(1);
+  await history.getByRole("button", { name: "Archive all shown", exact: true }).click();
+  confirm = page.getByRole("dialog", { name: "Archive 1 request?", exact: true });
+  await confirm.getByRole("button", { name: "Archive requests", exact: true }).click();
+  await expect(confirm).toBeHidden();
+  await expect(history.getByRole("link")).toHaveCount(0);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("ishara.requests.archived")!))).toEqual(["school-token"]);
+  await history.getByRole("button", { name: "Clear filters", exact: true }).click();
+  await expect(history.getByRole("link")).toHaveCount(1);
+  await expect(history.getByRole("link")).toContainText("Rashid Hospital");
+});
+
+test("coordinator bulk archive retains the selection on failure and submits once", async ({ page }) => {
+  const second = { ...request, id: "second", requester_name: "Another resident" };
+  let archived = false;
+  let fail = true;
+  let submissions = 0;
+  await page.route("**/api/requests", route => route.fulfill({ json: archived ? [] : [request, second] }));
+  await page.route("**/api/requests/archive", route => {
+    submissions++;
+    expect(route.request().postDataJSON()).toEqual({ request_ids: [request.id, second.id] });
+    if (fail) return route.fulfill({ status: 503, json: { detail: "Archive unavailable" } });
+    archived = true;
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/");
+  await coordinatorView(page);
+  await page.getByRole("button", { name: "Requests", exact: true }).click();
+  const history = page.getByRole("dialog", { name: "Recent requests", exact: true });
+  await history.getByRole("button", { name: "Archive all shown", exact: true }).click();
+  const confirm = page.getByRole("dialog", { name: "Archive 2 requests?", exact: true });
+  await confirm.getByRole("button", { name: "Archive requests", exact: true }).click();
+  await expect(confirm.getByRole("alert")).toContainText("Archive unavailable");
+  expect(archived).toBe(false);
+  fail = false;
+  await confirm.getByRole("button", { name: "Archive requests", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); });
+  await expect(confirm).toBeHidden();
+  await expect(history.locator(".history-request")).toHaveCount(0);
+  await expect(history).toContainText("2 requests archived");
+  expect(submissions).toBe(2);
+});
+
 test("production coordinator shows read-only interpreter responses", async ({ page }) => {
   await page.route("**/api/config", route => route.fulfill({ json: { demo: false, operator_auth_required: true } }));
   await page.route("**/api/requests/latest", route => route.fulfill({ json: { ...request, status: "dispatching", offers: [{ id: 1, interpreter_id: "one", status: "pending", expires_at: request.now + 300, sent_at: request.now, wave: 1, reasons: ["certified"] }] } }));

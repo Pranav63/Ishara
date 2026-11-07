@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Modal } from "@/components/ui";
 import { useLanguage } from "@/components/Preferences";
 import { api } from "@/lib/api";
-import { archiveRequest, archivedRequestTokens, filterHistory, forgetRequest, HISTORY_FILTERS, requestTokens, type HistoryEntry, type HistoryFilters } from "@/lib/request-history";
+import { archiveRequest, archiveRequests, archivedRequestTokens, filterHistory, forgetRequest, HISTORY_FILTERS, requestTokens, type HistoryEntry, type HistoryFilters } from "@/lib/request-history";
 import type { Snapshot } from "@/lib/types";
 
 const STATES = {
@@ -30,6 +30,7 @@ export function RequestHistory({ coordinator = false, onSelect }: { coordinator?
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [bulk, setBulk] = useState<HistoryEntry[] | null>(null);
   const invalidDates = Boolean(filters.from && filters.to && filters.from > filters.to);
   // Requester filters run locally; only coordinator filters trigger a new server search.
   const serverFilters = coordinator ? filters : HISTORY_FILTERS;
@@ -84,6 +85,22 @@ export function RequestHistory({ coordinator = false, onSelect }: { coordinator?
     } catch (e) { setError((e as Error).message); }
     finally { acting.current = false; setBusy(false); }
   }
+  async function archiveAll() {
+    if (!bulk || acting.current) return;
+    acting.current = true; setBusy(true); setError(null);
+    try {
+      if (coordinator) await api.archiveRequests(bulk.map(row => row.id));
+      else {
+        if (!archiveRequests(bulk.map(row => row.token!))) throw new Error(t("Could not save the archive change in this browser. Please try again.", "تعذر حفظ تغيير الأرشيف في هذا المتصفح. يرجى المحاولة مجدداً."));
+        setLocalArchives(archivedRequestTokens());
+      }
+      const ids = new Set(bulk.map(row => row.id));
+      setEntries(current => current.filter(row => !ids.has(row.id)));
+      setNotice(t(`${bulk.length} ${bulk.length === 1 ? "request" : "requests"} archived. Matching and support continue.`, `تمت أرشفة الطلبات المعروضة (${bulk.length}). يستمر البحث عن مترجم والدعم.`));
+      setBulk(null); setRevision(value => value + 1);
+    } catch (e) { setError((e as Error).message); }
+    finally { acting.current = false; setBusy(false); }
+  }
   function remove(token: string) {
     if (!forgetRequest(token)) {
       setError(t("The link could not be removed. Clear this site's browser data on a shared device.", "تعذر حذف الرابط. امسح بيانات هذا الموقع من المتصفح على الجهاز المشترك."));
@@ -120,7 +137,7 @@ export function RequestHistory({ coordinator = false, onSelect }: { coordinator?
             <label>{t("Sort by", "الترتيب حسب")}<select aria-label={t("Sort by", "الترتيب حسب")} value={filters.sort} onChange={e => update("sort", e.target.value as HistoryFilters["sort"])}><option value="newest">{t("Newest added", "الأحدث إضافة")}</option><option value="soonest">{t("Appointment: earliest first", "الموعد: الأقرب أولاً")}</option><option value="latest">{t("Appointment: latest first", "الموعد: الأبعد أولاً")}</option></select></label>
           </div>}
       </div>
-      <div className="history-results"><p className="small muted" role="status">{loading ? t("Updating requests…", "جارٍ تحديث الطلبات…") : `${rows.length} ${t("shown", "معروضة")}${coordinator && rows.length === 100 ? t(" · First 100 matches; narrow your filters", " · أول ١٠٠ نتيجة؛ حدد عوامل التصفية") : ""}`}</p>{changed && <button type="button" className="btn small" onClick={() => setFilters(HISTORY_FILTERS)}>{t("Clear filters", "مسح التصفية")}</button>}</div>
+      <div className="history-results"><p className="small muted" role="status">{loading ? t("Updating requests…", "جارٍ تحديث الطلبات…") : `${rows.length} ${t("shown", "معروضة")}${coordinator && rows.length === 100 ? t(" · First 100 matches; narrow your filters", " · أول ١٠٠ نتيجة؛ حدد عوامل التصفية") : ""}`}</p><div className="history-list-actions">{changed && <button type="button" className="btn small" onClick={() => setFilters(HISTORY_FILTERS)}>{t("Clear filters", "مسح التصفية")}</button>}{!archived && rows.length > 0 && <button type="button" className="btn small" disabled={busy || loading} onClick={() => { setBulk(rows); setError(null); }}><Archive size={16} aria-hidden />{t("Archive all shown", "أرشفة جميع المعروضة")}</button>}</div></div>
       <p className="small muted history-scope">{coordinator ? t("Archives are shared with coordinators. Archiving does not cancel matching or remove support work.", "الأرشيف مشترك بين المنسقين. الأرشفة لا تلغي البحث عن مترجم ولا تزيل طلب الدعم.") : t("Private links and archives stay in this browser. Archiving does not cancel a request. Remove links on shared devices.", "تبقى الروابط الخاصة والأرشيف في هذا المتصفح. الأرشفة لا تلغي الطلب. احذف الروابط على الأجهزة المشتركة.")}</p>
       {notice && <p className="history-status" role="status">{notice}</p>}
       {invalidDates && <p className="error" role="alert">{t("The end date must be on or after the start date.", "يجب أن يكون تاريخ النهاية في تاريخ البداية أو بعده.")}</p>}
@@ -129,11 +146,16 @@ export function RequestHistory({ coordinator = false, onSelect }: { coordinator?
       <ul className="request-history-list" aria-busy={loading || busy}>
         {rows.map(row => <li key={row.id}>
           {coordinator ? <button type="button" className="history-request" disabled={busy || loading} onClick={() => select(row.id)}><HistoryCopy row={row} lang={lang} showName /><ArrowUpRight size={18} aria-hidden /></button> : <Link className="history-request" href={`/r/${row.token}`} onClick={() => setOpen(false)}><HistoryCopy row={row} lang={lang} /><ArrowUpRight size={18} aria-hidden /></Link>}
-          <div className="history-row-actions"><button type="button" className="btn small" disabled={busy || loading} aria-label={t(`${archived ? "Restore" : "Archive"} ${row.appointment.entity}`, `${archived ? "استعادة" : "أرشفة"} ${row.appointment.entity}`)} onClick={() => archive(row)}>{archived ? <ArchiveRestore size={16} aria-hidden /> : <Archive size={16} aria-hidden />}{archived ? t("Restore", "استعادة") : t("Archive", "أرشفة")}</button>
+          <div className="history-row-actions"><button type="button" className="icon-btn" disabled={busy || loading} title={archived ? t("Restore request", "استعادة الطلب") : t("Archive request", "أرشفة الطلب")} aria-label={t(`${archived ? "Restore" : "Archive"} ${row.appointment.entity}`, `${archived ? "استعادة" : "أرشفة"} ${row.appointment.entity}`)} onClick={() => archive(row)}>{archived ? <ArchiveRestore size={18} aria-hidden /> : <Archive size={18} aria-hidden />}</button>
           {!coordinator && row.token && <button type="button" className="icon-btn" disabled={busy} aria-label={t(`Remove ${row.appointment.entity} from this browser`, `حذف ${row.appointment.entity} من هذا المتصفح`)} onClick={() => remove(row.token!)}><X size={16} aria-hidden /></button>}</div>
         </li>)}
         {missing.map(token => <li key={token}><Link className="history-request" href={`/r/${token}`} onClick={() => setOpen(false)}><span>{t("Saved request", "طلب محفوظ")}<small>{t("Could not refresh. Open your private link to retry. Status and date filters cannot check this request.", "تعذر التحديث. افتح رابطك الخاص للمحاولة مجدداً. لا يمكن التحقق من حالته أو تاريخه للتصفية.")}</small></span><ArrowUpRight size={18} aria-hidden /></Link><button type="button" className="icon-btn" disabled={busy} aria-label={t("Remove saved link", "حذف الرابط المحفوظ")} onClick={() => remove(token)}><X size={16} aria-hidden /></button></li>)}
       </ul>
+    </Modal>
+    <Modal open={bulk !== null} onClose={() => setBulk(null)} title={t(`Archive ${bulk?.length ?? 0} ${bulk?.length === 1 ? "request" : "requests"}?`, `أرشفة الطلبات المعروضة (${bulk?.length ?? 0})؟`)} closeLabel={t("Close archive confirmation", "إغلاق تأكيد الأرشفة")}>
+      <p>{t("Only the requests currently shown will move to Archived. Matching and coordinator support continue. You can restore them later.", "ستُنقل الطلبات المعروضة حالياً فقط إلى الأرشيف. يستمر البحث عن مترجم ودعم المنسق. يمكنك استعادتها لاحقاً.")}</p>
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="history-confirm-actions"><button type="button" className="btn" disabled={busy} onClick={() => setBulk(null)}>{t("Cancel", "إلغاء")}</button><button type="button" className="btn primary" disabled={busy} onClick={archiveAll}>{busy ? t("Archiving…", "جارٍ الأرشفة…") : t("Archive requests", "أرشفة الطلبات")}</button></div>
     </Modal>
   </>;
 }

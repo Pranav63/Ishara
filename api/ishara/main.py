@@ -19,7 +19,7 @@ from .config import Settings
 from .db import Store
 from .dispatcher import Conflict, Dispatcher, NotFound
 from .llm import LLM
-from .models import AcknowledgeIn, ApprovalIn, ArchiveIn, ArrivalIn, CompleteIn, OperatorLoginIn, RequestIn, RequestStatus
+from .models import AcknowledgeIn, ApprovalIn, ArchiveIn, ArchiveManyIn, ArrivalIn, CompleteIn, OperatorLoginIn, RequestIn, RequestStatus
 from .places import PLACES
 from .seed import seed
 from .telegram import Telegram
@@ -145,6 +145,11 @@ def create_app(cfg: Optional[Settings] = None) -> FastAPI:
         start = datetime.combine(date_from, daytime.min, DUBAI).timestamp() if date_from else None
         end = datetime.combine(date_to, daytime.min, DUBAI).timestamp() + 86400 if date_to else None
         return d.recent_requests(archived, q.strip(), status, start, end, sort)
+
+    @app.post("/api/requests/archive", dependencies=[Depends(operator)])
+    def archive_many(body: ArchiveManyIn) -> dict:
+        d.archive_requests(body.request_ids)
+        return {"ok": True}
 
     @app.post("/api/requests/{rid}/archive", dependencies=[Depends(operator)])
     def archive(rid: str, body: ArchiveIn) -> dict:

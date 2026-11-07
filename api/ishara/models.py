@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -13,6 +13,11 @@ RequestStatus = Literal["parsing", "reviewing", "dispatching", "confirmed", "rep
 class ArchiveIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     archived: bool = Field(strict=True)
+
+
+class ArchiveManyIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    request_ids: list[Annotated[str, Field(min_length=1, max_length=128)]] = Field(min_length=1, max_length=100)
 
 
 class Appointment(BaseModel):

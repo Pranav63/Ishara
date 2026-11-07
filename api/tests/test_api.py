@@ -93,3 +93,19 @@ def test_history_filters_use_dubai_appointment_dates_and_search_all_requests(cfg
             app.state.dispatcher.create_request(MEDICAL, f"New resident {i}")
         assert len(c.get("/api/requests").json()) == 100
         assert c.get("/api/requests?q=Midnight").json()[0]["id"] == ids[0]
+
+
+def test_bulk_archive_is_atomic_and_only_archives_selected_requests(cfg):
+    with TestClient(create_app(cfg)) as c:
+        requests = [c.post("/api/requests", json={"text": MEDICAL}).json() for _ in range(3)]
+        ids = [row["id"] for row in requests]
+        path = "/api/requests/archive"
+        assert c.post(path, json={"request_ids": [ids[0], "missing"]}).status_code == 404
+        assert len(c.get("/api/requests").json()) == 3
+        for bad in ([], ids * 34, [""], ["a" * 129], [123]):
+            assert c.post(path, json={"request_ids": bad}).status_code == 422
+        assert c.post(path, json={"request_ids": ids[:2]}).json() == {"ok": True}
+        assert c.post(path, json={"request_ids": ids[:2]}).json() == {"ok": True}
+        assert [row["id"] for row in c.get("/api/requests").json()] == ids[2:]
+        assert {row["id"] for row in c.get("/api/requests?archived=true").json()} == set(ids[:2])
+        assert all(c.get(f"/api/r/{row['token']}").json()["status"] == "reviewing" for row in requests)
