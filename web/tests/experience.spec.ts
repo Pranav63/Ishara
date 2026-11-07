@@ -177,7 +177,7 @@ for (const lang of ["en", "ar"]) test(`request history filters fit a narrow view
   const history = page.getByRole("dialog");
   await history.getByRole("button", { name: lang === "ar" ? "عوامل التصفية" : "Filters", exact: true }).click();
   await expect(history.locator(".history-request")).toHaveCount(1);
-  expect(await history.evaluate(el => [...el.querySelectorAll("input, select, button")].filter(x => x.getClientRects().length).every(x => { const r = x.getBoundingClientRect(), b = el.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right; }))).toBe(true);
+  await expect.poll(() => history.evaluate(el => [...el.querySelectorAll("input, select, button")].filter(x => x.getClientRects().length).filter(x => { const r = x.getBoundingClientRect(), b = el.getBoundingClientRect(); return r.left < b.left || r.right > b.right; }).map(x => x.getAttribute("aria-label") || x.textContent))).toEqual([]);
   await history.getByRole("button", { name: lang === "ar" ? "أرشفة Rashid Hospital" : "Archive Rashid Hospital", exact: true }).click();
   await expect(history).toContainText(lang === "ar" ? "تمت أرشفة الطلب" : "Request archived");
 });
