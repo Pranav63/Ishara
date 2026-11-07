@@ -148,13 +148,14 @@ for (const lang of ["en", "ar"]) {
     const button = page.getByRole("button", { name: lang === "ar" ? "الخدمة غير متاحة" : "Service unavailable", exact: true });
     const message = page.locator("#msg");
     await expect(button).toBeDisabled();
+    await page.evaluate(() => document.fonts.ready);
     await message.fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
     await page.locator(".request-form").evaluate(form => (form as HTMLFormElement).requestSubmit());
-    await expect(page.locator("#request-service")).toHaveText(lang === "ar" ? "يمكنك تجهيز الرسالة. الإرسال غير متاح حالياً." : "You can prepare a message. Sending is unavailable.");
+    await expect(page.locator("#request-service")).toHaveText(lang === "ar" ? "الخدمة غير متاحة. يمكنك متابعة الكتابة." : "Service unavailable. You can keep writing.");
     for (const [width, height] of [[390, 844], [1280, 720]]) {
       await page.setViewportSize({ width, height });
       await expect(button).toBeInViewport();
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect.poll(() => page.evaluate(() => ({ width: Math.max(0, document.documentElement.scrollWidth - innerWidth), height: Math.max(0, document.documentElement.scrollHeight - innerHeight) }))).toEqual({ width: 0, height: 0 });
     }
     expect(submissions).toBe(0);
     const retry = page.getByRole("button", { name: lang === "ar" ? "حاول مجدداً" : "Try again", exact: true });
