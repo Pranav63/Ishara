@@ -108,6 +108,7 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   // Never show a confirmation naming an interpreter who has since cancelled.
   const conf = confirmed && data.confirmation ? (prefs.lang === "ar" ? data.confirmation.ar ?? data.confirmation.en : data.confirmation.en) : null;
   const summary = data.summary ? (prefs.lang === "ar" ? data.summary.ar ?? data.summary.en : data.summary.en) : null;
+  const message = data.message.replace(/\[([A-Z_]+)\]/g, () => prefs.lang === "ar" ? "(تم حجب بيانات خاصة)" : "(private detail hidden)");
   const arrival = data.status === "confirmed" ? data.arrival : null;
   const minutes = arrival ? Math.ceil((arrival.eta - data.now) / 60) : 0;
   let arrivalText = "";
@@ -127,20 +128,20 @@ export default function Requester({ params }: { params: Promise<{ token: string 
         </AnimatePresence>
 
         <header className="requester-top"><Link className="brand" href="/" aria-label={t.home}><span className="brand-name" translate="no">Ishara</span><span lang="ar">إشارة</span></Link><DisplaySettings /></header>
-        <AgentCompanion status={data.status} />
+        {data.status !== "reviewing" && <AgentCompanion status={data.status} />}
         {prefs.textOnly && <p className="small">{t.textHelp}</p>}
         {error && <p className="error" role="alert">{t.offline}</p>}
 
-        <section className="card status-card" role="status" aria-atomic="true">
+        {data.status !== "reviewing" && <section className="card status-card" role="status" aria-atomic="true">
           <span className={`status-icon${confirmed ? " ok" : data.status === "escalated" ? " bad" : ""}`} aria-hidden><StatusIcon size={26} /></span>
           <div>
             <p className="muted small">{t.your}</p>
             <h1>{statusText}</h1>
             {arrivalText && <p className="arrival-text">{arrivalText}</p>}
           </div>
-        </section>
+        </section>}
 
-        {data.status === "reviewing" && <section className="card"><ReviewAppointment key={data.id} snap={data} onDone={refresh} /></section>}
+        {data.status === "reviewing" && <section className="card requester-review"><ReviewAppointment key={data.id} snap={data} onDone={refresh} primary /><details className="review-source"><summary>{prefs.lang === "ar" ? "رسالتك الأصلية" : "Your original message"}</summary><p dir="auto">{message}</p></details></section>}
 
         {data.status === "escalated" && (
           <section className="card" aria-labelledby="remote-title">
@@ -156,13 +157,13 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           </section>
         )}
 
-        <section className="card">
+        {data.status !== "reviewing" && <section className="card">
           <div className="fact"><MapPin size={20} aria-hidden /><span><strong>{a.entity}</strong><br /><span className="muted">{areaName(a.area, prefs.lang)}</span></span></div>
           <div className="fact"><Clock size={20} aria-hidden /><span className="num">{dayTime(a.starts_at, prefs.lang)}</span></div>
           <ol className="dots" aria-label={t.progress}>
             {t.steps.map((s, i) => <li key={s} className={i <= at ? "on" : ""} aria-current={i === at ? "step" : undefined}><span className="sr-only">{s}</span></li>)}
           </ol>
-        </section>
+        </section>}
 
         {data.status !== "reviewing" && data.status !== "parsing" && <section className="card">
           <p className="muted small">{t.interpreter}</p>
@@ -192,12 +193,12 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           </section>
         )}
 
-        <section className="card" aria-label={t.messages}>
+        {data.status !== "reviewing" && <section className="card" aria-label={t.messages}>
           <p className="muted small">{t.messages}</p>
-          <div className="bubble them" dir="auto">{data.message.replace(/\[([A-Z_]+)\]/g, () => prefs.lang === "ar" ? "(تم حجب بيانات خاصة)" : "(private detail hidden)")}</div>
+          <div className="bubble them" dir="auto">{message}</div>
           {conf && <div className="bubble us" lang={prefs.lang === "ar" && data.confirmation?.ar ? "ar" : "en"} dir="auto">{conf}</div>}
           {summary && <div className="bubble us" lang={prefs.lang === "ar" && data.summary?.ar ? "ar" : "en"} dir="auto"><strong>{t.summary}</strong><br />{summary}</div>}
-        </section>
+        </section>}
 
         {staff && <StaffCard name={who && confirmed ? who.name : null} arrival={arrival} label={t.staff} closeLabel={t.close} onClose={() => setStaff(false)} />}
       </main>

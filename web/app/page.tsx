@@ -3,7 +3,7 @@
 import { Activity, ArrowRight, CircleHelp, Hand, Menu, Play, Settings2, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/components/Chrome";
 import { Header } from "@/components/Header";
@@ -36,12 +36,13 @@ export default function Console() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [created, setCreated] = useState<Snapshot | null>(null);
+  const checkService = useCallback(() => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setServiceState("online"); }).catch(() => setServiceState("offline")), []);
   useEffect(() => {
-    const check = () => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setServiceState("online"); }).catch(() => setServiceState("offline"));
-    check();
-    const poll = setInterval(check, 15000);
+    checkService();
+    const poll = setInterval(checkService, 15000);
     return () => clearInterval(poll);
-  }, []);
+  }, [checkService]);
+  function retryService() { setServiceState("checking"); checkService(); }
   const coordinator = mode === "coordinator" && session?.authenticated === true;
   const { data, error, refresh } = useLive(load, { enabled: coordinator });
   useEffect(() => { if (!coordinator) { setCompose(false); setCreated(null); } }, [coordinator]);
@@ -76,18 +77,18 @@ export default function Console() {
     <DisplaySettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     <HowItWorks open={helpOpen} onClose={() => setHelpOpen(false)} />
     {coordinator && <OfflineBanner online={availability !== "offline"} />}
-    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setCompose(false); } refresh(); }} />{!compose && <OfferDock snap={snap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
+    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setCompose(false); } refresh(); }} />{!compose && <OfferDock snap={snap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
       <section className="resident-intro">
         <div className="service-label"><Hand size={18} aria-hidden />{t("Appointments · Dubai", "المواعيد · دبي")}</div>
         <h1>{t("Sign language support", "دعم بلغة الإشارة")} <span>{t("for your appointment", "لموعدك")}</span></h1>
         <p className="intro-description">{t("Review your appointment details and follow interpreter updates in text.", "راجع تفاصيل موعدك وتابع تحديثات المترجم بالنص.")}</p>
         <div className="welcome-guide"><WelcomeArt />
           <ol className="resident-flow" aria-label={t("How your request works", "كيف يعمل طلبك")}>
-            {[["Share", "شارك"], ["Review", "راجع"], ["Follow", "تابع"]].map(([en, ar]) => <li key={en}>{t(en, ar)}</li>)}
+            {[["Share message", "شارك الرسالة"], ["Review details", "راجع التفاصيل"], ["Follow updates", "تابع التحديثات"]].map(([en, ar]) => <li key={en}>{t(en, ar)}</li>)}
           </ol>
         </div>
       </section>
-      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
+      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
       <footer className="resident-footer"><span>{t("No phone call needed.", "دون مكالمة هاتفية.")}</span><span>{t("Help in Menu", "المساعدة في القائمة")}</span></footer>
     </main>}
   </div></MotionRoot>;

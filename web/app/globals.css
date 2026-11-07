@@ -262,6 +262,7 @@ textarea:focus, input:focus { background: #fff; border-color: var(--accent); }
 .request-cancel { font: inherit; font-size: max(14px, .875rem); min-height: 44px; padding: 4px 6px; border: 0; border-radius: 8px; background: none; color: var(--ink-2); cursor: pointer; }
 .sheet.is-composing .request-form { border: 0; padding: 0 20px 20px; gap: 12px; }
 .request-form textarea, .request-form input { font-size: 1rem; }
+.request-form > label { font-size: max(14px, .875rem); font-weight: 500; }
 .request-form textarea { min-height: 160px; background: var(--surface-soft); }
 .request-extras { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
 .request-extras > details { flex: 1 1 130px; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
@@ -276,9 +277,11 @@ textarea:focus, input:focus { background: #fff; border-color: var(--accent); }
 .request-extra-body { padding: 12px; }
 .request-extras input { margin: 0; background: var(--surface); }
 .request-examples .sample { flex: 1 1 auto; white-space: normal; padding: 8px 12px; }
-.request-form .request-continue { border-radius: var(--r-md); gap: 10px; box-shadow: none; }
+.request-form .request-continue { min-height: 48px; border-radius: var(--r-md); gap: 10px; box-shadow: none; }
 .request-form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--ink-2); }
 .request-form-foot > p { flex: 1 1 140px; min-width: 0; font-size: max(13px, .8rem); line-height: 1.5; }
+.request-retry { min-height: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: max(13px, .8rem); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; border-radius: 4px; }
+.request-retry:hover { color: var(--accent); }
 .request-privacy { font-size: max(13px, .8rem); max-width: 100%; }
 .request-privacy[open] { flex-basis: 100%; }
 .request-privacy summary { display: flex; align-items: center; gap: 5px; min-height: 44px; cursor: pointer; border-radius: 6px; }
@@ -581,7 +584,13 @@ button, input, textarea, select { scroll-margin-block: calc(var(--head-h) + 24px
 html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover .companion-head { transform: none !important; }
 @media (prefers-reduced-motion: reduce) { .companion-touch *, .companion-touch:hover .companion-head { transform: none !important; } }
 .appointment-review { display: grid; gap: 14px; }
-.appointment-review h2 { margin-bottom: 6px; }
+.review-heading { display: flex; align-items: flex-start; gap: 16px; }
+.review-heading > div:first-child { flex: 1; min-width: 0; }
+.appointment-review h1, .appointment-review h2 { margin-bottom: 8px; }
+.requester-review h1 { font-size: clamp(24px, 4vw, 28px); line-height: 1.2; font-weight: 600; }
+.requester-review .review-source { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); }
+.review-source summary { min-height: 44px; cursor: pointer; font-size: max(14px, .875rem); font-weight: 500; }
+.review-source p { padding-top: 8px; color: var(--ink-2); font-size: max(14px, .875rem); line-height: 1.6; }
 .appointment-review label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
 .review-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-width: 0; }
 .review-pair > * { min-width: 0; }
@@ -627,14 +636,14 @@ html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover
 .resident-request .sheet { position: relative; inset: auto; width: 100%; margin: 0; max-height: none; background: var(--surface); }
 .resident-request .sheet-head { padding: 24px 24px 18px; }
 .resident-request .sheet-body { overflow: visible; }
-.resident-request .composer { border-top: 0; padding: 0 24px 20px; gap: 10px; }
-.resident-request textarea { min-height: 148px; background: var(--surface-soft); }
+.resident-request .sheet .composer { border-top: 0; padding: 0 24px 20px; gap: 8px; }
+.resident-request textarea { min-height: 136px; background: var(--surface-soft); }
 .prototype-note { font-size: 12px; line-height: 1.6; color: var(--ink-2); padding: 14px 12px 0; }
 .resident-footer { grid-column: 1 / -1; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; color: var(--ink-2); font-size: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
 .requester-phone { max-width: 660px; padding-top: 20px; }
 .requester-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 0 10px; }
 .requester-phone .card { padding: 24px; }
-.requester-phone .agent-companion { padding: 20px; }
+.requester-phone .agent-companion:not(.compact) { padding: 20px; }
 .requester-phone .status-card { gap: 16px; }
 .requester-phone .status-card h1 { font-size: 24px; }
 .coordinator-note { padding: 12px; background: var(--surface-soft); border-radius: 12px; }
@@ -688,7 +697,7 @@ html.reduce-motion .companion-touch *, html.reduce-motion .companion-touch:hover
   .welcome-guide { display: none; }
   .intro-description { font-size: max(14px, .875rem); }
   .resident-request .sheet-head { padding: 20px 20px 16px; }
-  .resident-request .composer { padding-inline: 20px; }
+  .resident-request .sheet .composer { padding-inline: 20px; }
   .requester-phone { padding-inline: 12px; }
   .requester-phone .card { padding: 20px 16px; }
   .requester-phone .status-card h1 { font-size: 21px; }

@@ -10,15 +10,17 @@ cd api
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 python -m pytest
-DEMO_MODE=1 uvicorn --factory ishara.main:create_app --reload --port 8000
+DEMO_MODE=1 LLM_PROVIDER=none .venv/bin/python -m uvicorn --factory ishara.main:create_app --reload --host 127.0.0.1 --port 8001
 
 # Web, in a second terminal from the repository root (Node.js 24)
 cd web
 npm ci
-npm run dev
+ISHARA_API_URL=http://127.0.0.1:8001 npm run dev -- --hostname 127.0.0.1 --port 3001
 ```
 
-Open http://localhost:3000. The web server proxies `/api` to `http://127.0.0.1:8000` by default. Development output goes to `web/.next-dev`; production builds use `web/.next`, so building does not overwrite the running development server's chunks.
+Open http://127.0.0.1:3001. These commands explicitly connect the frontend on `3001` to the API on `8001`, avoiding other local projects. Run each server in its own terminal and leave both running. The API command works without activating the virtual environment. The frontend command overrides a stale `ISHARA_API_URL` in `web/.env.local`; without an override, the proxy defaults to port `8000`. Development output goes to `web/.next-dev`; production builds use `web/.next`, so building does not overwrite the running development server's chunks.
+
+Verify both servers with `curl -fsS http://127.0.0.1:8001/api/health` and `curl -fsS http://127.0.0.1:3001/api/health`; both should return `{"ok":true}`. If the frontend says the service is unavailable, check that the API is running on the same port as `ISHARA_API_URL`. `npm run start` requires a successful `npm run build` first; use `npm run dev` for local editing. Stop the server before reinstalling dependencies or removing its build output. Do not run two development servers against the same `web/.next-dev` directory.
 
 `.env.example` documents settings; the API reads process environment variables, rather than loading that file automatically. For local production-style operator sign-in, set `DEMO_MODE=0`, a random `ISHARA_OPERATOR_KEY` of at least 32 characters, and `OPERATOR_COOKIE_SECURE=0` only for local HTTP. Public deployments keep secure cookies enabled.
 

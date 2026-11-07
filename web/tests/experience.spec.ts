@@ -157,9 +157,20 @@ for (const lang of ["en", "ar"]) {
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
     expect(submissions).toBe(0);
+    const retry = page.getByRole("button", { name: lang === "ar" ? "حاول مجدداً" : "Try again", exact: true });
+    await retry.click();
+    await expect(button).toBeDisabled();
+    available = true;
+    await retry.click();
+    const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true });
+    await expect(review).toBeEnabled();
+    await expect(retry).toBeHidden();
+    available = false;
+    await page.clock.fastForward(15000);
+    await expect(button).toBeDisabled();
     available = true;
     await page.clock.fastForward(15000);
-    await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true })).toBeEnabled();
+    await expect(review).toBeEnabled();
     await expect(message).toHaveValue("Appointment at Rashid Hospital, 12 November at 10:30 AM");
     expect(submissions).toBe(0);
   });
@@ -182,6 +193,43 @@ test("form waits for the initial service check before allowing submission", asyn
   await expect(page.getByRole("button", { name: "Review appointment", exact: true })).toBeEnabled();
   expect(submissions).toBe(0);
 });
+
+for (const lang of ["en", "ar"]) {
+  test(`private review has one clear task and confirms the edited details (${lang})`, async ({ page }) => {
+    await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, theme: "light" })), lang);
+    let approved = false;
+    let payload: unknown;
+    await page.route("**/api/r/preview-token", route => route.fulfill({ json: { ...request, status: approved ? "dispatching" : "reviewing" } }));
+    await page.route("**/api/places", route => route.fulfill({ json: { "Oud Metha": [25.24, 55.31] } }));
+    await page.route("**/api/r/preview-token/approve", async route => {
+      payload = route.request().postDataJSON();
+      approved = true;
+      await route.fulfill({ json: { ok: true } });
+    });
+    await page.goto("/r/preview-token");
+    await expect(page.getByRole("heading", { level: 1, name: lang === "ar" ? "راجع موعدك" : "Review your appointment", exact: true })).toBeVisible();
+    await expect(page.locator(".status-card, .agent-copy, .fact")).toHaveCount(0);
+    const confirm = page.getByRole("button", { name: lang === "ar" ? "تأكيد الطلب" : "Confirm request", exact: true });
+    await expect(confirm).toBeEnabled();
+    for (const width of [1280, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const guide = await page.locator(".review-heading .companion-touch").boundingBox();
+      expect(guide!.width).toBeGreaterThanOrEqual(44);
+      expect(guide!.height).toBeGreaterThanOrEqual(44);
+    }
+    await expect(page.locator(".review-source p")).toBeHidden();
+    await page.locator(".review-source summary").focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".review-source p")).toHaveText(request.message);
+    expect(approved).toBe(false);
+    await page.getByLabel(lang === "ar" ? "مكان الموعد" : "Appointment location", { exact: true }).fill("Rashid Clinic");
+    await confirm.click();
+    await expect(page.locator(".appointment-review")).toHaveCount(0);
+    await expect(page.locator(".status-card h1")).toHaveText(lang === "ar" ? "نبحث عن مترجمك" : "Finding your interpreter");
+    expect(payload).toMatchObject({ entity: "Rashid Clinic", area: "Oud Metha", duration_min: 60, language: "UAE Sign Language" });
+  });
+}
 
 test("welcome animation respects motion and text-first preferences", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
