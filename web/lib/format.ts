@@ -39,7 +39,7 @@ export const STATUS: Record<string, { label: string; tone: "ok" | "wait" | "bad"
 export const SAMPLES = [
   {
     label: "Hospital visit",
-    text: "Dubai Health: your appointment is confirmed at Rashid Hospital, Oud Metha, on 12 Nov 2026 at 10:30 AM with Dr. Hassan. Call 050 123 4567 if needed.",
+    text: "Dubai Health: your appointment is confirmed at Rashid Hospital, Oud Metha, on Thursday at 10:30 AM with Dr. Hassan. Call 050 123 4567 if needed.",
   },
   {
     label: "Emirates ID renewal",

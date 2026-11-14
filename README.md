@@ -1,6 +1,6 @@
 # Ishara
 
-Interpreter dispatch agent for UAE Sign Language. A Deaf resident forwards an appointment message, reviews the inferred details, and approves before the agent contacts interpreters. The agent offers the slot to qualified interpreters in waves, confirms in English and Arabic, briefs the interpreter, keeps a pre-warmed backup, and replaces the interpreter automatically if they cancel.
+Interpreter dispatch agent for UAE Sign Language. A Deaf resident forwards an appointment message, reviews the inferred details, and approves before the agent contacts interpreters. The agent offers the slot to qualified interpreters in waves, confirms in English and Arabic, briefs the interpreter, keeps a pre-warmed backup, and replaces the interpreter automatically if they cancel. Each outcome (completed, declined, unanswered or cancelled after accepting) updates that interpreter's reliability score, which the next match uses; the coordinator timeline shows each update.
 
 ## Run locally
 
@@ -24,11 +24,11 @@ Verify both servers with `curl -fsS http://127.0.0.1:8001/api/health` and `curl 
 
 `.env.example` documents settings; the API reads process environment variables, rather than loading that file automatically. For local production-style operator sign-in, set `DEMO_MODE=0`, a random `ISHARA_OPERATOR_KEY` of at least 32 characters, and `OPERATOR_COOKIE_SECURE=0` only for local HTTP. Public deployments keep secure cookies enabled.
 
-## Language, appearance and Dana
+## Language, appearance and the agent
 
 The shared display controls switch the interface between English and Arabic, including right-to-left reading order. They also offer light, dark or device-controlled appearance, three text sizes, high contrast, reduced motion, and text-first mode. Preferences are saved on the current browser. Incoming appointment text, names, free-text notes and operator audit messages retain their source language; the language switch does not claim to translate them.
 
-**Dana / دانة** is the resident's small animated guide. Her written messages explain whether the request is being read, awaiting review, matching, confirmed, being replaced, escalated or completed. The visual is decorative and hidden from assistive technology; text-first mode hides it and reduced-motion settings suppress animation. Dana's animation is not sign language and does not replace a qualified interpreter.
+**The agent orb** is Ishara's single visual identity: the hand mark inside a gradient that flows while the agent is working, turns green when an interpreter is confirmed and amber when coordinator help is needed. It signs the "What Ishara has done" timeline on the request and coordinator views. It is decorative and hidden from assistive technology; the timeline and status text carry the meaning, text-first mode hides the orb, and Reduce Motion keeps it still.
 
 ## Request review and coordinator queue
 
@@ -51,6 +51,12 @@ When local matching is exhausted, a durable escalation appears in the operator's
 The generic confirmation recording must sign this exact message: **“An interpreter has been confirmed for your appointment. Read their name and your appointment details on this page.”** It confirms booking status only; names, dates and places remain in the written confirmation. Have Emirati Sign Language users review the recording and its meaning before enabling it. Keep the signer’s full signing space visible. The player shows a text equivalent in English or Arabic.
 
 Restart the API after changing these environment variables. On an existing database, startup adds the arrivals table without replacing requests.
+
+## Conversation (text bridge)
+
+During the visit, **Conversation** on the request page opens a full-screen text bridge. Live captions show what staff say, using the browser's speech recognition (`SpeechRecognition`, `webkitSpeechRecognition` in Safari) in English or Gulf Arabic (`ar-AE`). The resident types replies or taps quick messages, which are written in the staff member's language; the latest reply can be turned 180° to face staff across a desk, and optionally read aloud with speech synthesis. Where recognition is unavailable, staff type into the same screen instead.
+
+Ishara does not store or send the conversation, but the browser's own speech service processes the audio (Google in Chrome, Apple in Safari). Recognition quality, Arabic dialect handling and microphone permission prompts vary by browser and device, and need testing with Deaf participants and staff in a real clinic. Captions support a conversation; they do not replace a qualified interpreter for medical or legal decisions.
 
 ## DeafBlind accessibility verification
 

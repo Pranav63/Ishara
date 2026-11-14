@@ -116,3 +116,29 @@ def test_simultaneous_acceptances_confirm_exactly_one_interpreter(d):
         assert sorted(pool.map(accept, pending[:2])) == ["accepted", "conflict"]
     assert len(offers(d, rid, "accepted")) == 1
     assert len(offers(d, rid, "withdrawn")) == 1
+
+
+def test_reliability_learns_from_outcomes_and_changes_matching(d):
+    from ishara.matcher import rank
+
+    t = tokens(d)
+    rel = lambda iid: next(i for i in d.interpreters(False) if i["id"] == iid)["reliability"]
+    score = lambda rid, iid: next(c.score for c in rank(d._interpreters(), d._appt(d._req(rid)), set(), set()) if c.interpreter["id"] == iid)
+    rid = create_approved(d, MEDICAL)
+    o = offers(d, rid, "pending")[0]
+    who, before = o["interpreter_id"], rel(o["interpreter_id"])
+    score_before = score(rid, who)
+    d.respond(t[who], o["id"], True)
+    d.cancel(t[who], rid)
+    assert rel(who) == pytest.approx(round(before * 0.85, 4))  # pulled 15% toward 0
+    assert score(rid, who) < score_before  # the next match ranks them lower
+    learned = [e["payload"] for e in d.events(rid) if e["kind"] == "reliability_updated"]
+    assert learned[-1]["outcome"] == "cancelled" and learned[-1]["interpreter_id"] == who
+    assert "events" not in d.snapshot(rid, ops=False) and all(e["kind"] != "reliability_updated" for e in d.snapshot(rid, ops=False)["timeline"])
+
+    rid = create_approved(d, GOV)
+    o = offers(d, rid, "pending")[0]
+    before = rel(o["interpreter_id"])
+    d.respond(t[o["interpreter_id"]], o["id"], True)
+    d.complete(t[o["interpreter_id"]], rid, "Done.")
+    assert rel(o["interpreter_id"]) == pytest.approx(round(before + 0.15 * (1 - before), 4))

@@ -358,9 +358,7 @@ test("landing starts with the message form and an example can be reviewed", asyn
   await expect(page.getByRole("link", { name: "Start a request", exact: true })).toHaveCount(0);
   await page.getByLabel("Your appointment message").click();
   await expect(page.getByLabel("Your appointment message")).toBeFocused();
-  await page.locator(".request-examples summary").click();
   await page.getByRole("button", { name: "Hospital", exact: true }).click();
-  await expect(page.locator(".request-examples")).not.toHaveAttribute("open", "");
   await expect(page.getByLabel("Your appointment message")).toBeFocused();
   await expect(page.getByLabel("Your appointment message")).toHaveValue(/Rashid Hospital/);
   await page.locator(".optional-name summary").click();
@@ -397,14 +395,7 @@ for (const lang of ["en", "ar"]) {
       await page.setViewportSize({ width, height });
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
       await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true })).toBeInViewport();
-      if (width > 560) {
-        const alignment = await page.locator(".welcome-guide").evaluate(guide => {
-          const icons = [...guide.querySelectorAll(".welcome-tile")].map(icon => icon.getBoundingClientRect());
-          const labels = [...guide.querySelectorAll("li")].map(label => label.getBoundingClientRect());
-          return labels.map((label, i) => Math.abs(label.left + label.width / 2 - icons[i].left - icons[i].width / 2));
-        });
-        expect(alignment.every(offset => offset < 1)).toBe(true);
-      }
+      await expect(page.locator(".home-visual")).toBeVisible({ visible: width >= 900 });
     }
   });
 }
@@ -490,7 +481,7 @@ for (const lang of ["en", "ar"]) {
     for (const width of [1280, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      const guide = await page.locator(".review-heading .companion-touch").boundingBox();
+      const guide = await page.locator(".review-heading .agent-orb").boundingBox();
       expect(guide!.width).toBeGreaterThanOrEqual(44);
       expect(guide!.height).toBeGreaterThanOrEqual(44);
     }
@@ -507,37 +498,20 @@ for (const lang of ["en", "ar"]) {
   });
 }
 
-test("welcome animation respects motion and text-first preferences", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "no-preference" });
+test("landing preview steps through the agent only when asked", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
-  await expect(page.locator(".welcome-ink").first()).toHaveCSS("animation-name", "welcome-connect");
-  await page.evaluate(() => document.fonts.ready);
-  const guide = page.locator(".welcome-guide");
-  const initialBounds = await guide.boundingBox();
-  const delays = await page.locator(".welcome-step").evaluateAll(steps => steps.map(step => parseFloat(getComputedStyle(step).animationDelay)));
-  expect(delays).toHaveLength(3);
-  expect(delays[0]).toBeLessThan(delays[1]);
-  expect(delays[1]).toBeLessThan(delays[2]);
-  await guide.evaluate(element => element.getAnimations({ subtree: true }).forEach(animation => animation.finish()));
-  expect(await guide.boundingBox()).toEqual(initialBounds);
-  for (const step of await page.locator(".welcome-step").all()) {
-    await expect(step).toHaveCSS("opacity", "1");
-    await expect(step).toHaveCSS("transform", /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/);
-    await expect(step).toHaveCSS("animation-iteration-count", "1");
-  }
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await expect(page.locator(".welcome-step").first()).toHaveCSS("animation-name", "none");
-  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const preview = page.getByRole("figure", { name: "Example request", exact: true });
+  await expect(preview.locator(".island")).toContainText("Appointment read");
+  await page.waitForTimeout(1500);
+  await expect(preview.locator(".island")).toContainText("Appointment read");
+  const confirms = preview.getByRole("button", { name: "Confirms", exact: true });
+  await confirms.click();
+  await expect(confirms).toHaveAttribute("aria-pressed", "true");
+  await expect(preview.locator(".island")).toContainText("Mariam A. is confirmed");
   await openSettings(page);
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");
-  await page.getByLabel("Reduce motion", { exact: true }).check();
-  await expect(page.locator(".welcome-ink").first()).toHaveCSS("animation-name", "none");
-  await expect(page.locator(".welcome-step").first()).toHaveCSS("animation-name", "none");
-  await expect(page.locator(".resident-flow li").first()).toHaveCSS("animation-name", "none");
-  await page.getByLabel("Text-first mode", { exact: true }).check();
-  await expect(page.locator(".welcome-art")).toBeHidden();
 });
 
 test("new request shows the task, keeps extras collapsed, and Cancel preserves the draft", async ({ page }) => {
@@ -552,8 +526,7 @@ test("new request shows the task, keeps extras collapsed, and Cancel preserves t
   const sheet = page.locator(".sheet");
   await expect(sheet.getByRole("heading", { name: "New request", exact: true })).toBeVisible();
   await expect(sheet.getByRole("textbox")).toHaveCount(1);
-  await expect(sheet.locator(".agent-copy, .companion-choices")).toHaveCount(0);
-  await expect(sheet.getByRole("button", { name: "Hospital", exact: true })).toBeHidden();
+  await expect(sheet.getByRole("button", { name: "Hospital", exact: true })).toBeVisible();
   await expect(sheet.getByLabel("Your name", { exact: true })).toBeHidden();
   await expect(sheet.locator(".request-privacy p")).toBeHidden();
   await expect(sheet.getByRole("button", { name: "Review appointment", exact: true })).toBeDisabled();
@@ -626,11 +599,12 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
   });
 }
 
-test("companion choice lives in display settings and text-first mode keeps entry simple", async ({ page }) => {
+test("settings fit narrow screens and text-first mode keeps entry simple", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 1000 });
   await page.goto("/");
   await coordinatorView(page);
   await page.getByRole("button", { name: "New request", exact: true }).click();
+  await expect(page.locator(".sheet-head .agent-orb")).toBeVisible();
   await openSettings(page);
   const bounds = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
@@ -640,15 +614,8 @@ test("companion choice lives in display settings and text-first mode keeps entry
     const rect = await page.getByRole("dialog", { name: "Display & accessibility", exact: true }).boundingBox();
     return rect!.x >= 0 && rect!.x + rect!.width <= 390;
   }).toBe(true);
-  await page.getByRole("button", { name: "Pearl", exact: true }).click();
-  await expect(page.locator(".sheet-head .companion-pearl")).toBeVisible();
-  await page.reload();
-  await coordinatorView(page);
-  await page.getByRole("button", { name: "New request", exact: true }).click();
-  await expect(page.locator(".sheet-head .companion-pearl")).toBeVisible();
-  await openSettings(page);
   await page.getByLabel("Text-first mode", { exact: true }).check();
-  await expect(page.locator(".sheet-head .companion-touch")).toHaveCount(0);
+  await expect(page.locator(".sheet-head .agent-orb")).toHaveCount(0);
   await expect(page.getByLabel("Your appointment message")).toBeVisible();
 });
 
@@ -956,21 +923,77 @@ for (const lang of ["en", "ar"]) {
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto("/");
     const name = page.locator(".optional-name");
-    const examples = page.locator(".request-examples");
     await expect(name.locator("summary")).toHaveCSS("list-style-type", "none");
-    await expect(examples.locator("summary")).toHaveCSS("list-style-type", "none");
     await name.locator("summary").focus();
     await page.keyboard.press("Enter");
     await page.getByLabel(lang === "ar" ? "اسمك" : "Your name", { exact: true }).fill("Amal");
-    await examples.locator("summary").focus();
-    await page.keyboard.press("Enter");
-    await expect(name).not.toHaveAttribute("open", "");
-    await expect(examples).toHaveAttribute("open", "");
     await page.getByRole("button", { name: lang === "ar" ? "مستشفى" : "Hospital", exact: true }).click();
-    await expect(examples).not.toHaveAttribute("open", "");
     await expect(page.getByLabel(lang === "ar" ? "رسالة موعدك" : "Your appointment message")).toBeFocused();
-    await name.locator("summary").click();
     await expect(page.getByLabel(lang === "ar" ? "اسمك" : "Your name", { exact: true })).toHaveValue("Amal");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
+
+test("conversation captions staff speech and shows the resident's replies", async ({ page }) => {
+  await page.addInitScript(() => {
+    class FakeRecognition {
+      lang = ""; continuous = false; interimResults = false; started = 0;
+      onresult: ((e: unknown) => void) | null = null; onerror: ((e: unknown) => void) | null = null; onend: (() => void) | null = null;
+      constructor() { (window as unknown as { __rec: FakeRecognition }).__rec = this; }
+      start() { this.started++; }
+      stop() { this.onend?.(); }
+      abort() {}
+    }
+    Object.assign(window, { webkitSpeechRecognition: FakeRecognition, SpeechRecognition: undefined });
+  });
+  await page.route("**/api/r/preview-token", route => route.fulfill({ json: { ...request, status: "dispatching", timeline: [] } }));
+  await page.goto("/r/preview-token");
+  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  const bridge = page.getByRole("dialog", { name: "Conversation", exact: true });
+  await expect(bridge).toBeVisible();
+  await bridge.getByRole("button", { name: "Start captions", exact: true }).click();
+  await expect(bridge.getByRole("status")).toContainText("Listening");
+  const say = (results: [boolean, string][]) => page.evaluate(results => {
+    const rec = (window as unknown as { __rec: { lang: string; onresult: (e: unknown) => void } }).__rec;
+    rec.onresult({ resultIndex: 0, results: results.map(([isFinal, transcript]) => ({ isFinal, 0: { transcript } })) });
+    return rec.lang;
+  }, results);
+  expect(await say([[false, "Please take"]])).toBe("en-US");
+  await expect(bridge.locator(".bridge-line.interim")).toHaveText("Please take");
+  await expect(bridge.locator(".bridge-line.interim")).toBeVisible();
+  await say([[true, "Please take a seat."]]);
+  await expect(bridge.locator(".bridge-line.from-staff", { hasText: "Please take a seat." })).toBeVisible();
+  await expect(bridge.locator(".bridge-line.interim")).toHaveCount(0);
+  await bridge.getByRole("button", { name: "Repeat", exact: true }).click();
+  await expect(bridge.locator(".bridge-show p")).toHaveText("Could you repeat that, please?");
+  const flip = bridge.getByRole("button", { name: "Turn to staff", exact: true });
+  await flip.click();
+  await expect(flip).toHaveAttribute("aria-pressed", "true");
+  await bridge.getByLabel("Your reply", { exact: true }).fill("Thank you");
+  await bridge.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(bridge.locator(".bridge-show p")).toHaveText("Thank you");
+  await expect(flip).toHaveAttribute("aria-pressed", "false");
+  await bridge.getByRole("combobox").selectOption("ar-AE");
+  expect(await say([[true, "تفضل بالجلوس"]])).toBe("ar-AE");
+  await bridge.getByRole("button", { name: "Repeat", exact: true }).click();
+  await expect(bridge.locator(".bridge-show p")).toHaveText("هل يمكنك الإعادة من فضلك؟");
+  await page.evaluate(() => (window as unknown as { __rec: { onerror: (e: unknown) => void } }).__rec.onerror({ error: "not-allowed" }));
+  await expect(bridge.getByRole("alert")).toContainText("Microphone access is blocked");
+  await bridge.getByRole("button", { name: "Close conversation", exact: true }).click();
+  await expect(bridge).toBeHidden();
+});
+
+test("conversation falls back to staff typing when the browser has no speech recognition", async ({ page }) => {
+  await page.addInitScript(() => Object.assign(window, { webkitSpeechRecognition: undefined, SpeechRecognition: undefined }));
+  await page.route("**/api/r/preview-token", route => route.fulfill({ json: { ...request, status: "confirmed", timeline: [] } }));
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto("/r/preview-token");
+  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  const bridge = page.getByRole("dialog", { name: "Conversation", exact: true });
+  await expect(bridge.getByRole("button", { name: "Start captions" })).toHaveCount(0);
+  await expect(bridge).toContainText("Live captions are not available in this browser");
+  await bridge.getByLabel("Staff message", { exact: true }).fill("Room 4, please.");
+  await bridge.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(bridge.locator(".bridge-line.from-staff", { hasText: "Room 4, please." })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

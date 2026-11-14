@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRight, CircleHelp, Hand, Menu, Play, Settings2, X } from "lucide-react";
+import { Activity, ArrowRight, CircleHelp, Menu, Play, Settings2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -9,6 +9,7 @@ import { RequestHistory } from "@/components/RequestHistory";
 import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/components/Chrome";
 import { Header } from "@/components/Header";
+import { HomePreview } from "@/components/HomePreview";
 import { HowItWorks } from "@/components/HowItWorks";
 import { LiveMap } from "@/components/LiveMap";
 import { MotionRoot } from "@/components/Motion";
@@ -16,7 +17,6 @@ import { OfferDock } from "@/components/OfferDock";
 import { OperatorAccess } from "@/components/OperatorAccess";
 import { DisplaySettingsDialog, LanguageToggle, useLanguage } from "@/components/Preferences";
 import { RequesterSheet } from "@/components/RequesterSheet";
-import { WelcomeArt } from "@/components/WelcomeArt";
 import { Popover } from "@/components/ui";
 import { api, type OperatorSession } from "@/lib/api";
 import { useLive, useNow } from "@/lib/live";
@@ -86,17 +86,11 @@ export default function Console() {
     {coordinator && <OfflineBanner online={availability !== "offline"} />}
     {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
       <section className="resident-intro">
-        <div className="service-label"><Hand size={18} aria-hidden />{t("Appointments · Dubai", "المواعيد · دبي")}</div>
-        <h1>{t("Sign language support", "دعم بلغة الإشارة")} <span>{t("for your appointment", "لموعدك")}</span></h1>
-        <p className="intro-description">{t("Review your appointment details and follow interpreter updates in text.", "راجع تفاصيل موعدك وتابع تحديثات المترجم بالنص.")}</p>
-        <div className="welcome-guide"><WelcomeArt />
-          <ol className="resident-flow" aria-label={t("How your request works", "كيف يعمل طلبك")}>
-            {[["Share message", "شارك الرسالة"], ["Review details", "راجع التفاصيل"], ["Follow updates", "تابع التحديثات"]].map(([en, ar]) => <li key={en}>{t(en, ar)}</li>)}
-          </ol>
-        </div>
+        <h1>{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
+        <p className="intro-description">{t("Paste your appointment message. Ishara finds a certified interpreter and keeps you updated in text.", "ألصق رسالة موعدك. تجد إشارة مترجماً معتمداً وتبقيك على اطلاع بالنص.")}</p>
       </section>
       <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
-      <footer className="resident-footer"><span>{t("No phone call needed.", "دون مكالمة هاتفية.")}</span><span>{t("Help in Menu", "المساعدة في القائمة")}</span></footer>
+      <HomePreview />
     </main>}
   </div></MotionRoot>;
 }

@@ -1,15 +1,17 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { Check, Clock, IdCard, MapPin, RefreshCw, Video, X } from "lucide-react";
+import { IdCard, MessagesSquare, Video, X } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
 import { RequestHistory } from "@/components/RequestHistory";
 import { rememberRequest } from "@/lib/request-history";
 import { MotionRoot } from "@/components/Motion";
 import Link from "next/link";
-import { AgentCompanion } from "@/components/AgentCompanion";
+import { AgentTimeline } from "@/components/AgentTimeline";
 import { DisplaySettings, usePreferences } from "@/components/Preferences";
 import { ReviewAppointment } from "@/components/ReviewAppointment";
+import { StatusCard } from "@/components/StatusCard";
+import { TextBridge } from "@/components/TextBridge";
 import { api } from "@/lib/api";
 import type { Lang } from "@/lib/preferences";
 import { areaName } from "@/lib/locale";
@@ -20,9 +22,9 @@ import type { Snapshot } from "@/lib/types";
 const T = {
   en: {
     home: "Home", reviewing: "Review your appointment details", coordinator: "Coordinator support", queued: "Your request is in the coordinator queue. It has not been acknowledged yet.", acknowledged: "A coordinator has acknowledged your request.",
-    your: "Your appointment", steps: ["Message received", "Finding your interpreter", "Interpreter confirmed", "Visit complete"],
+    your: "Your appointment", steps: ["Message received", "Finding your interpreter", "Interpreter confirmed", "Visit complete"], stages: ["Received", "Matching", "Confirmed", "Done"],
     replacing: "Finding a replacement", escalated: "No local interpreter is available", interpreter: "Your interpreter", lookFor: "Look for",
-    arrives: "Planned arrival by", staff: "Show to Staff", size: "Text size", contrast: "High contrast", alertsOn: "Flash and vibrate on updates",
+    arrives: "Planned arrival by", staff: "Show to Staff", talk: "Conversation", size: "Text size", contrast: "High contrast", alertsOn: "Flash and vibrate on updates",
     alertsOff: "Alerts off", lang: "العربية", messages: "Messages", summary: "Summary of your visit", you: "You", updated: "Update",
     pending: "Not confirmed yet. You do not need to do anything.", invalid: "Could not load your appointment. Check your connection or ask the coordinator to check your link.",
     loading: "Loading your appointment…", retry: "Try again", settings: "Display settings", progress: "Progress", close: "Close",
@@ -42,9 +44,9 @@ const T = {
   },
   ar: {
     home: "الرئيسية", reviewing: "راجع تفاصيل موعدك", coordinator: "دعم المنسق", queued: "طلبك في قائمة انتظار المنسق. لم يتم استلامه بعد.", acknowledged: "أكد المنسق استلام طلبك.",
-    your: "موعدك", steps: ["تم استلام الرسالة", "نبحث عن مترجمك", "تم تأكيد المترجم", "اكتملت الزيارة"],
+    your: "موعدك", steps: ["تم استلام الرسالة", "نبحث عن مترجمك", "تم تأكيد المترجم", "اكتملت الزيارة"], stages: ["الاستلام", "المطابقة", "التأكيد", "الاكتمال"],
     replacing: "نبحث عن مترجم بديل", escalated: "لا يتوفر مترجم محلي حالياً", interpreter: "مترجمك", lookFor: "ابحث عن",
-    arrives: "وقت الوصول المخطط", staff: "اعرض على الموظفين", size: "حجم النص", contrast: "تباين عالٍ", alertsOn: "وميض واهتزاز عند التحديث",
+    arrives: "وقت الوصول المخطط", staff: "اعرض على الموظفين", talk: "محادثة", size: "حجم النص", contrast: "تباين عالٍ", alertsOn: "وميض واهتزاز عند التحديث",
     alertsOff: "التنبيهات متوقفة", lang: "English", messages: "الرسائل", summary: "ملخص زيارتك", you: "أنت", updated: "تحديث",
     pending: "لم يتم التأكيد بعد. لا تحتاج إلى فعل أي شيء.", invalid: "تعذر تحميل موعدك. تحقق من اتصالك أو اطلب من المنسق التحقق من رابطك.",
     loading: "جارٍ تحميل موعدك…", retry: "حاول مرة أخرى", settings: "إعدادات العرض", progress: "التقدم", close: "إغلاق",
@@ -95,6 +97,7 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   const [historySaved, setHistorySaved] = useState(true);
   useEffect(() => { if (data) setHistorySaved(rememberRequest(data.token)); }, [data?.token]);
   const [staff, setStaff] = useState(false);
+  const [bridge, setBridge] = useState(false);
   const [failedVideo, setFailedVideo] = useState<string | null>(null);
   const t = T[prefs.lang];
   const flash = useVisualAlert(data ? `${data.status}:${data.assigned?.id ?? ""}:${data.arrival?.updated_at ?? ""}` : undefined, prefs.alerts && !prefs.textOnly && !prefs.reducedMotion);
@@ -108,7 +111,6 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   const who = data.assigned;
   const confirmed = data.status === "confirmed" || data.status === "completed";
   const statusText = data.status === "reviewing" ? t.reviewing : data.status === "replanning" ? t.replacing : data.status === "escalated" ? t.escalated : t.steps[at];
-  const StatusIcon = confirmed ? Check : data.status === "replanning" ? RefreshCw : Clock;
   // Never show a confirmation naming an interpreter who has since cancelled.
   const conf = confirmed && data.confirmation ? (prefs.lang === "ar" ? data.confirmation.ar ?? data.confirmation.en : data.confirmation.en) : null;
   const summary = data.summary ? (prefs.lang === "ar" ? data.summary.ar ?? data.summary.en : data.summary.en) : null;
@@ -131,20 +133,12 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           )}
         </AnimatePresence>
 
-        <header className="requester-top"><Link className="brand" href="/" aria-label={t.home}><span className="brand-name" translate="no">Ishara</span><span lang="ar">إشارة</span></Link><div className="requester-actions"><RequestHistory /><DisplaySettings /></div></header>
-        {data.status !== "reviewing" && <AgentCompanion status={data.status} />}
+        <header className="requester-top glass"><Link className="brand" href="/" aria-label={t.home}><span className="brand-name" translate="no">Ishara</span><span lang="ar">إشارة</span></Link><div className="requester-actions"><RequestHistory /><DisplaySettings /></div></header>
         {!historySaved && <p className="small error" role="alert">{prefs.lang === "ar" ? "تعذر حفظ الرابط في هذا المتصفح. احتفظ برابط هذه الصفحة للرجوع إلى طلبك." : "This browser could not save your link. Keep this page’s private link to return to your request."}</p>}
         {prefs.textOnly && <p className="small">{t.textHelp}</p>}
         {error && <p className="error" role="alert">{t.offline}</p>}
 
-        {data.status !== "reviewing" && <section className="card status-card" role="status" aria-atomic="true">
-          <span className={`status-icon${confirmed ? " ok" : data.status === "escalated" ? " bad" : ""}`} aria-hidden><StatusIcon size={26} /></span>
-          <div>
-            <p className="muted small">{t.your}</p>
-            <h1>{statusText}</h1>
-            {arrivalText && <p className="arrival-text">{arrivalText}</p>}
-          </div>
-        </section>}
+        {data.status !== "reviewing" && <StatusCard status={data.status} kicker={t.your} title={statusText} arrival={arrivalText} place={a.entity} area={areaName(a.area, prefs.lang)} when={dayTime(a.starts_at, prefs.lang)} stages={t.stages} progressLabel={t.progress} />}
 
         {data.status === "reviewing" && <section className="card requester-review"><ReviewAppointment key={data.id} snap={data} onDone={refresh} primary /><details className="review-source"><summary>{prefs.lang === "ar" ? "رسالتك الأصلية" : "Your original message"}</summary><p dir="auto">{message}</p></details></section>}
 
@@ -162,13 +156,6 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           </section>
         )}
 
-        {data.status !== "reviewing" && <section className="card">
-          <div className="fact"><MapPin size={20} aria-hidden /><span><strong>{a.entity}</strong><br /><span className="muted">{areaName(a.area, prefs.lang)}</span></span></div>
-          <div className="fact"><Clock size={20} aria-hidden /><span className="num">{dayTime(a.starts_at, prefs.lang)}</span></div>
-          <ol className="dots" aria-label={t.progress}>
-            {t.steps.map((s, i) => <li key={s} className={i <= at ? "on" : ""} aria-current={i === at ? "step" : undefined}><span className="sr-only">{s}</span></li>)}
-          </ol>
-        </section>}
 
         {data.status !== "reviewing" && data.status !== "parsing" && <section className="card">
           <p className="muted small">{t.interpreter}</p>
@@ -184,7 +171,6 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           ) : (
             <p>{data.status === "escalated" ? t.noLocal : t.pending}</p>
           )}
-          <button className="btn primary big" onClick={() => setStaff(true)}><IdCard size={20} aria-hidden />{t.staff}</button>
         </section>}
 
         {data.status === "confirmed" && (
@@ -198,6 +184,10 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           </section>
         )}
 
+        {data.status !== "reviewing" && data.timeline && <section className="card">
+          <AgentTimeline items={data.timeline} status={data.status} waitingForCoordinator={data.status === "escalated" && data.escalation?.status !== "acknowledged"} />
+        </section>}
+
         {data.status !== "reviewing" && <section className="card" aria-label={t.messages}>
           <p className="muted small">{t.messages}</p>
           <div className="bubble them" dir="auto">{message}</div>
@@ -205,6 +195,8 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           {summary && <div className="bubble us" lang={prefs.lang === "ar" && data.summary?.ar ? "ar" : "en"} dir="auto"><strong>{t.summary}</strong><br />{summary}</div>}
         </section>}
 
+        {data.status !== "reviewing" && data.status !== "parsing" && <div className="action-bar"><button className="btn big" onClick={() => setBridge(true)}><MessagesSquare size={20} aria-hidden />{t.talk}</button><button className="btn primary big" onClick={() => setStaff(true)}><IdCard size={20} aria-hidden />{t.staff}</button></div>}
+        {bridge && <TextBridge onClose={() => setBridge(false)} />}
         {staff && <StaffCard name={who && confirmed ? who.name : null} arrival={arrival} label={t.staff} closeLabel={t.close} onClose={() => setStaff(false)} />}
       </main>
     </MotionRoot>

@@ -23,7 +23,7 @@ const line = (pts: Pt[]) => pts.map((p, i) => `${i ? "L" : "M"}${px(p)[0].toFixe
 const WATER = `M0,0 ${line(COAST).replace(/^M/, "L")} L${W},0 Z`;
 
 type State = "idle" | "pending" | "accepted" | "standby" | "out";
-const STROKE: Record<State, string> = { idle: "#a99b89", pending: "#d9930d", accepted: "var(--action)", standby: "var(--action)", out: "#c2413a" };
+const STROKE: Record<State, string> = { idle: "#9a9aa3", pending: "#e08600", accepted: "var(--action)", standby: "var(--action)", out: "#c4182b" };
 
 function stateOf(id: string, offers: Offer[]): { state: State; offer?: Offer } {
   const o = offers.filter((x) => x.interpreter_id === id).pop();
@@ -70,7 +70,7 @@ export function DubaiMap({ places, interpreters, snap, now }: { places: Places; 
         const [x, y] = px(places[n]);
         return (
           <g key={n} aria-hidden>
-            <circle cx={x} cy={y} r={3} fill="#a99b89" />
+            <circle cx={x} cy={y} r={3} fill="#9a9aa3" />
             <text x={x + 9} y={y + 6} fontSize={17} fill="var(--ink-3)">{n}</text>
           </g>
         );
@@ -111,13 +111,13 @@ export function DubaiMap({ places, interpreters, snap, now }: { places: Places; 
         return (
           <g key={it.id} opacity={dim ? 0.45 : 1} style={{ transition: "opacity 0.4s" }}>
             {state === "pending" && (
-              <circle cx={p[0]} cy={p[1]} r={33} fill="none" stroke="#d9930d" strokeWidth={3} strokeLinecap="round" pathLength={1} strokeDasharray="1" strokeDashoffset={1 - frac} transform={`rotate(-90 ${p[0]} ${p[1]})`} />
+              <circle cx={p[0]} cy={p[1]} r={33} fill="none" stroke="#e08600" strokeWidth={3} strokeLinecap="round" pathLength={1} strokeDasharray="1" strokeDashoffset={1 - frac} transform={`rotate(-90 ${p[0]} ${p[1]})`} />
             )}
             <m.circle
               className="pin"
               cx={p[0]} cy={p[1]} r={26}
               fill={state === "accepted" ? "var(--action)" : "var(--surface)"}
-              stroke={state === "idle" ? "#c8bfb4" : STROKE[state]}
+              stroke={state === "idle" ? "#c7c7cc" : STROKE[state]}
               strokeWidth={state === "idle" ? 1.5 : 2.5}
               strokeDasharray={state === "standby" ? "3 3" : undefined}
               animate={{ scale: state === "accepted" ? 1.12 : 1 }}

@@ -84,6 +84,7 @@ export interface Snapshot {
   offers?: Offer[];
   briefing?: Briefing | null;
   events?: Ev[];
+  timeline?: { id: number; ts: number; kind: string }[];
 }
 
 export interface Metrics {

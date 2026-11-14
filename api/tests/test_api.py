@@ -17,7 +17,11 @@ def test_api_flow(cfg):
         assert c.post(f"/api/i/{tok[offer['interpreter_id']]}/offers/{offer['id']}/accept").json() == {"ok": True}
         assert c.post(f"/api/i/{tok[offer['interpreter_id']]}/offers/{offer['id']}/accept").status_code == 409
         view = c.get(f"/api/r/{snap['token']}").json()
-        assert view["status"] == "confirmed" and "offers" not in view
+        assert view["status"] == "confirmed" and "offers" not in view and "events" not in view
+        kinds = [e["kind"] for e in view["timeline"]]
+        assert kinds[:3] == ["received", "parsed", "approved"] and "offered" in kinds and "accepted" in kinds
+        assert "review_required" not in kinds and "withdrawn" not in kinds
+        assert all(set(e) == {"id", "ts", "kind"} for e in view["timeline"])
         assert c.get("/api/i/nope").status_code == 404
         assert c.get("/api/requests/latest").json()["id"] == snap["id"]
 

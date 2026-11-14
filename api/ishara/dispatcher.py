@@ -20,6 +20,16 @@ from .timefmt import fmt
 
 log = logging.getLogger("ishara")
 _PUBLIC = ("id", "name", "area", "certified", "languages", "domains", "reliability")
+_TIMELINE = {
+    "received", "parsed", "approved", "offered", "declined", "expired", "accepted", "briefing_sent", "standby_reserved",
+    "interpreter_cancelled", "backup_promoted", "no_match", "coordinator_acknowledged", "arrival_updated", "completed",
+}
+
+
+# Learning from results: each outcome pulls reliability toward a target (exponential moving average).
+# A cancellation after accepting hurts the resident most; a polite decline barely counts against anyone.
+_OUTCOME = {"completed": 1.0, "declined": 0.8, "expired": 0.4, "cancelled": 0.0}
+_LEARNING_RATE = 0.15
 
 
 class Conflict(Exception):
@@ -85,6 +95,17 @@ class Dispatcher:
             "INSERT INTO events(request_id, ts, kind, actor, payload) VALUES (?,?,?,?,?)",
             (rid, self.clock(), kind, actor, json.dumps(payload, ensure_ascii=False)),
         )
+
+    def _learn(self, rid: str, interp_id: str, outcome: str) -> None:
+        """Update an interpreter's reliability from what just happened. Call inside a transaction."""
+        row = self.store.one("SELECT name, reliability FROM interpreters WHERE id=?", (interp_id,))
+        old = row["reliability"]
+        new = round(old + _LEARNING_RATE * (_OUTCOME[outcome] - old), 4)
+        self.store.x("UPDATE interpreters SET reliability=? WHERE id=?", (new, interp_id))
+        self._emit(rid, "reliability_updated", "agent", {
+            "text": f"Learned from this {outcome} offer: {row['name']} reliability {round(old * 100)}% → {round(new * 100)}%.",
+            "interpreter_id": interp_id, "outcome": outcome, "before": old, "after": new,
+        })
 
     def _set_offer(self, oid: int, status: str) -> None:
         self.store.x("UPDATE offers SET status=?, responded_at=? WHERE id=?", (status, self.clock(), oid))
@@ -191,6 +212,7 @@ class Dispatcher:
             if not accept:
                 self._set_offer(o["id"], "declined")
                 self._emit(rid, "declined", f"interpreter:{me['id']}", {"text": f"{me['name']} declined."})
+                self._learn(rid, me["id"], "declined")
                 self._replan_if_idle(rid)
                 return
             if me["id"] in self._busy(rid, self._appt(req)):
@@ -235,6 +257,7 @@ class Dispatcher:
             self.store.x("DELETE FROM arrivals WHERE request_id=?", (rid,))
             self.store.x("UPDATE requests SET assigned_id=NULL, status='replanning', briefing=NULL, confirmation=NULL WHERE id=?", (rid,))
             self._emit(rid, "interpreter_cancelled", f"interpreter:{me['id']}", {"text": f"{me['name']} can no longer attend."})
+            self._learn(rid, me["id"], "cancelled")
             backup = self.store.one("SELECT o.*, i.name FROM offers o JOIN interpreters i ON i.id=o.interpreter_id WHERE o.request_id=? AND o.status='standby'", (rid,))
             if backup and backup["interpreter_id"] in self._busy(rid, self._appt(req)):
                 self._set_offer(backup["id"], "withdrawn")
@@ -284,17 +307,19 @@ class Dispatcher:
             self.store.x("UPDATE requests SET status='completed', summary=? WHERE id=?", (json.dumps(summary, ensure_ascii=False), rid))
             self.store.x("UPDATE offers SET status='withdrawn' WHERE request_id=? AND status='standby'", (rid,))
             self._emit(rid, "completed", f"interpreter:{me['id']}", {"text": "Visit marked complete. Plain-language summary sent to the requester."})
+            self._learn(rid, me["id"], "completed")
 
     def tick(self) -> None:
         """Expire stale offers and move on. Safe to call every second."""
         with self.store.tx():
             due = self.store.q(
-                "SELECT o.id, o.request_id, i.name FROM offers o JOIN interpreters i ON i.id=o.interpreter_id WHERE o.status='pending' AND o.expires_at <= ?",
+                "SELECT o.id, o.request_id, o.interpreter_id, i.name FROM offers o JOIN interpreters i ON i.id=o.interpreter_id WHERE o.status='pending' AND o.expires_at <= ?",
                 (self.clock(),),
             )
             for o in due:
                 self._set_offer(o["id"], "expired")
                 self._emit(o["request_id"], "expired", "system", {"text": f"{o['name']} did not respond in time."})
+                self._learn(o["request_id"], o["interpreter_id"], "expired")
             for rid in {o["request_id"] for o in due}:
                 self._replan_if_idle(rid)
 
@@ -347,6 +372,9 @@ class Dispatcher:
             for o in offers:
                 o["reasons"] = json.loads(o["reasons"])
             out.update(offers=offers, briefing=json.loads(req["briefing"]) if req["briefing"] else None, events=self.events(rid))
+        else:
+            # Requesters see what the agent did, but not interpreter names or decline reasons.
+            out["timeline"] = [{"id": e["id"], "ts": e["ts"], "kind": e["kind"]} for e in self.events(rid) if e["kind"] in _TIMELINE]
         return out
 
     def latest(self) -> Optional[dict]:

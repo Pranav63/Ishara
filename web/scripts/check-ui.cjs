@@ -16,9 +16,6 @@ assert.equal(parsePrefs('{"lang":"ar","theme":"dark","contrast":true,"size":2,"t
 assert.equal(parsePrefs('{"lang":"xx","theme":"invalid","size":99,"alerts":"yes"}').theme, 'system');
 assert.equal(parsePrefs('{"size":99,"alerts":"yes"}').size, 0);
 assert.equal(parsePrefs('{"alerts":"yes"}').alerts, false);
-assert.equal(parsePrefs('{}').companion, 'falcon');
-assert.equal(parsePrefs('{"companion":"robot"}').companion, 'falcon');
-for (const companion of ['falcon', 'fox', 'pearl']) assert.equal(parsePrefs(JSON.stringify({ companion })).companion, companion);
 const { dubaiEpoch, dubaiInputValue } = load('review.ts');
 const expected = Date.UTC(2026, 10, 12, 6, 30) / 1000;
 assert.equal(dubaiEpoch('2026-11-12T10:30'), expected);
@@ -43,6 +40,10 @@ assert.match(duration(59.6, 'en'), /^1 min/);
 assert.match(duration(3599, 'en'), /^1 hr/);
 assert.match(duration(12681.1, 'en'), /3.*hr.*31.*min/);
 assert.match(duration(12681.1, 'ar'), /س.*د/);
+const { readResults } = load('captions.ts');
+const r = (isFinal, transcript) => ({ isFinal, 0: { transcript } });
+assert.deepEqual(readResults([r(true, ' Good morning '), r(false, 'please sit'), r(false, ' down ')], 0), { final: ['Good morning'], interim: 'please sit down' });
+assert.deepEqual(readResults([r(true, 'old line'), r(true, 'new line'), r(false, '  ')], 1), { final: ['new line'], interim: '' });
 console.log('UI self-checks passed: saved preference validation, Dubai date conversion, and review/matching progress.');
 
 // Exercise async ownership with hook stubs, without adding a browser-test dependency.
