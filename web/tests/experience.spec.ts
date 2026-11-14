@@ -486,10 +486,7 @@ for (const lang of ["en", "ar"]) {
       expect(guide!.width).toBeGreaterThanOrEqual(44);
       expect(guide!.height).toBeGreaterThanOrEqual(44);
     }
-    await expect(page.locator(".review-source p")).toBeHidden();
-    await page.locator(".review-source summary").focus();
-    await page.keyboard.press("Enter");
-    await expect(page.locator(".review-source p")).toHaveText(request.message);
+    await expect(page.locator(".review-message")).toHaveText(request.message);
     expect(approved).toBe(false);
     await page.getByLabel(lang === "ar" ? "مكان الموعد" : "Appointment location", { exact: true }).fill("Rashid Clinic");
     await confirm.click();

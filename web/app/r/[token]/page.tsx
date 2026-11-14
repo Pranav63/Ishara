@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { IdCard, MessagesSquare, Video, X } from "lucide-react";
+import { IdCard, MessageSquareQuote, MessagesSquare, Video, X } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
 import { RequestHistory } from "@/components/RequestHistory";
 import { rememberRequest } from "@/lib/request-history";
@@ -104,7 +104,7 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   const t = T[prefs.lang];
   const flash = useVisualAlert(data ? `${data.status}:${data.assigned?.id ?? ""}:${data.arrival?.updated_at ?? ""}` : undefined, prefs.alerts && !prefs.textOnly && !prefs.reducedMotion);
 
-  const root = "phone requester-phone";
+  const root = `phone requester-phone${data?.status === "reviewing" ? " is-reviewing" : ""}`;
   if (error && !data) return <main id="main" className={root} lang={prefs.lang} dir={prefs.lang === "ar" ? "rtl" : "ltr"}><div className="card"><h1>{t.invalid}</h1><button className="btn" onClick={refresh}>{t.retry}</button></div></main>;
   if (!data) return <main id="main" className={root} lang={prefs.lang} aria-busy="true"><p role="status">{t.loading}</p></main>;
 
@@ -142,7 +142,21 @@ export default function Requester({ params }: { params: Promise<{ token: string 
 
         {data.status !== "reviewing" && <StatusCard key={data.status} status={data.status} kicker={t.your} title={statusText} arrival={arrivalText} place={a.entity} area={areaName(a.area, prefs.lang)} when={dayTime(a.starts_at, prefs.lang)} stages={t.stages} progressLabel={t.progress} />}
 
-        {data.status === "reviewing" && <section className="card requester-review"><ReviewAppointment key={data.id} snap={data} onDone={refresh} primary /><details className="review-source"><summary>{prefs.lang === "ar" ? "رسالتك الأصلية" : "Your original message"}</summary><p dir="auto">{message}</p></details></section>}
+        {data.status === "reviewing" && <div className="review-layout">
+          <section className="card requester-review"><ReviewAppointment key={data.id} snap={data} onDone={refresh} primary /></section>
+          <aside className="review-aside">
+            <section className="review-message-card" aria-labelledby="review-message-title">
+              <h2 id="review-message-title"><MessageSquareQuote size={16} aria-hidden />{prefs.lang === "ar" ? "رسالتك الأصلية" : "Your original message"}</h2>
+              <p className="review-message" dir="auto">{message}</p>
+            </section>
+            <section className="review-next" aria-labelledby="review-next-title">
+              <h2 id="review-next-title">{prefs.lang === "ar" ? "بعد التأكيد" : "After you confirm"}</h2>
+              <ol>
+                {(prefs.lang === "ar" ? [["البحث", "نعرض الطلب على أقرب المترجمين المعتمدين."], ["التأكيد", "تتابع الحالة مباشرة على هذه الصفحة."], ["الاحتياط", "إذا اعتذر المترجم، نجد بديلاً تلقائياً."]] : [["Search", "Offered to the closest certified interpreters."], ["Confirm", "Follow the status live on this page."], ["Backup", "If anyone cancels, a replacement is found."]]).map(([title, body], i) => <li key={title}><span className="review-step num" aria-hidden>{i + 1}</span><div><strong>{title}</strong><p>{body}</p></div></li>)}
+              </ol>
+            </section>
+          </aside>
+        </div>}
 
         {data.status === "escalated" && (
           <section className="card" aria-labelledby="remote-title">
