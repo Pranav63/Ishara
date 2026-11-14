@@ -594,6 +594,8 @@ test("resetting a collapsed conversation leaves the new request form editable", 
   await openMenu(page);
   await page.locator(".workspace-reset summary").click();
   await page.getByRole("button", { name: "Reset", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Ishara coordinator", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "New request", exact: true }).click();
   await expect(page.getByLabel("Your appointment message")).toBeVisible();
 });
 

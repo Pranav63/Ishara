@@ -1434,3 +1434,43 @@ html.hc .demo-guide { background: var(--surface); backdrop-filter: none; border:
   .tile-swap span.on { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.18); }
   .story-closing h2 { font-size: 34px; }
 }
+
+/* ---------- AI coordinator overview (no open request) ---------- */
+.coord-overview { padding: 0; }
+.coord-head { display: flex; align-items: center; gap: 14px; padding: 22px 22px 6px; }
+.coord-head .agent-orb { width: 48px; height: 48px; flex: none; }
+.coord-head h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.coord-head .section-kicker { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--green); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 60%, transparent); animation: live-pulse 2s ease-out infinite; }
+@keyframes live-pulse { to { box-shadow: 0 0 0 8px transparent; } }
+.reduce-motion .live-dot { animation: none; }
+.coord-lede { padding: 4px 22px 14px; font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.coord-body { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 18px; align-content: start; padding: 0 16px 16px; }
+.coord-body h3 { display: flex; align-items: center; gap: 6px; margin: 0 6px 8px; font-size: 13px; font-weight: 650; color: var(--ink-2); }
+.coord-body h3 .num { padding: 1px 8px; border-radius: 999px; background: var(--fill); font-size: 12px; }
+.coord-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.coord-stats > div { padding: 12px 14px; border-radius: 18px; background: var(--glass-shine), var(--fill); box-shadow: inset 0 0.5px 0 var(--glass-rim); display: grid; gap: 4px; }
+.coord-stats dt { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.coord-stats dt svg { color: var(--tint); flex: none; }
+.coord-stats dd { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.coord-factors { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.coord-factors li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--tint); background: var(--tint-soft); }
+.coord-roster { list-style: none; margin: 0; padding: 4px; display: grid; gap: 2px; border-radius: 20px; background: var(--fill); }
+.coord-roster li { display: grid; grid-template-columns: 36px minmax(0, 1fr) 72px; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 16px; }
+.coord-roster li:hover { background: var(--fill); }
+.coord-roster .avatar { width: 36px; height: 36px; font-size: 13px; }
+.coord-who { display: grid; min-width: 0; }
+.coord-who strong { font-size: 14px; font-weight: 600; }
+.coord-who small { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coord-rel { display: grid; gap: 3px; justify-items: end; }
+.coord-track { width: 100%; height: 5px; border-radius: 5px; background: var(--fill-2); overflow: hidden; }
+.coord-track span { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--tint), var(--green)); transform-origin: left; }
+[dir="rtl"] .coord-track span { transform-origin: right; }
+.coord-rel small { font-size: 11px; font-weight: 600; color: var(--ink-2); }
+.coord-actions { flex: none; display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; padding: 12px 16px 16px; border-top: 0.5px solid var(--line); }
+.coord-actions .btn { min-height: 48px; }
+@media (max-width: 899px) {
+  .coord-body { overflow: visible; }
+  .coord-head { padding: 18px 18px 4px; }
+  .coord-lede { padding: 4px 18px 12px; }
+}

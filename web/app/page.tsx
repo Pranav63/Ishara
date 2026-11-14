@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RequestHistory } from "@/components/RequestHistory";
+import { CoordinatorOverview } from "@/components/CoordinatorOverview";
 import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/components/Chrome";
 import { Header } from "@/components/Header";
@@ -97,7 +98,7 @@ export default function Console() {
     <DisplaySettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     <HowItWorks open={helpOpen} onClose={() => setHelpOpen(false)} />
     {coordinator && <OfflineBanner online={availability !== "offline"} />}
-    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-main"><div className="resident-grid">
+    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main>{!snap && !compose ? <CoordinatorOverview interpreters={data?.interpreters ?? []} metrics={data?.metrics} onNew={() => setCompose(true)} onActivity={() => setDrawer(true)} /> : <RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />}{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-main"><div className="resident-grid">
       <section className="resident-intro">
         <h1>{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
         <p className="intro-description">{t("Paste your appointment message. Ishara books the interpreter.", "ألصق رسالة موعدك، وتحجز إشارة المترجم.")}</p>
