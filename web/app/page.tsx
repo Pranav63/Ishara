@@ -9,7 +9,7 @@ import { RequestHistory } from "@/components/RequestHistory";
 import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/components/Chrome";
 import { Header } from "@/components/Header";
-import { HomePreview } from "@/components/HomePreview";
+import { HomePreview, useDraftReading } from "@/components/HomePreview";
 import { HowItWorks } from "@/components/HowItWorks";
 import { LiveMap } from "@/components/LiveMap";
 import { MotionRoot } from "@/components/Motion";
@@ -60,6 +60,7 @@ export default function Console() {
   const events = activeSnap?.events ?? [];
   const availability = serviceState === "checking" ? "checking" : serviceState === "offline" || error ? "offline" : "online";
   const online = availability === "online";
+  const draftReading = useDraftReading(coordinator ? "" : draft, online);
 
   return <MotionRoot><div className={`${coordinator ? "console-view" : "resident-home"}${drawer ? " drawer-open" : ""}`}>
     <Header status={coordinator ? activeSnap?.status : undefined} navigation={<>
@@ -90,8 +91,8 @@ export default function Console() {
         <h1>{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
         <p className="intro-description">{t("Paste your appointment message. Ishara finds a certified interpreter and keeps you updated in text.", "ألصق رسالة موعدك. تجد إشارة مترجماً معتمداً وتبقيك على اطلاع بالنص.")}</p>
       </section>
-      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onDraft={setDraft} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
-      <HomePreview text={draft} online={online} />
+      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onDraft={setDraft} reading={draftReading.busy} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
+      <HomePreview reading={draftReading.reading} busy={draftReading.busy} />
     </main>}
   </div></MotionRoot>;
 }

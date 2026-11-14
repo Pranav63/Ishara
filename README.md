@@ -54,6 +54,10 @@ The generic confirmation recording must sign this exact message: **“An interpr
 
 Restart the API after changing these environment variables. On an existing database, startup adds the arrivals table without replacing requests.
 
+## Prepare for your visit
+
+Once a request is confirmed or matching, the request page offers **Add to calendar** (a standard `.ics` file), **Directions** (opens Google Maps for the venue) and **Share status** (the system share sheet, or copying the private link, with a warning that anyone holding the link can see the appointment). Residents can write **questions for staff** in advance; they are kept only in this browser, per request, and appear as one-tap quick messages in Conversation.
+
 ## Conversation (text bridge)
 
 During the visit, **Conversation** on the request page opens a full-screen text bridge. Live captions show what staff say, using the browser's speech recognition (`SpeechRecognition`, `webkitSpeechRecognition` in Safari) in English or Gulf Arabic (`ar-AE`). The resident types replies or taps quick messages, which are written in the staff member's language; the latest reply can be turned 180° to face staff across a desk, and optionally read aloud with speech synthesis. Where recognition is unavailable, staff type into the same screen instead.

@@ -396,7 +396,7 @@ for (const lang of ["en", "ar"]) {
       await page.setViewportSize({ width, height });
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
       await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true })).toBeInViewport();
-      await expect(page.locator(".home-visual")).toBeVisible({ visible: width >= 900 });
+      await expect(page.locator(".pass-stage")).toBeVisible({ visible: width >= 900 });
     }
   });
 }
@@ -499,28 +499,48 @@ for (const lang of ["en", "ar"]) {
   });
 }
 
-test("landing reads the draft live and flags what it had to guess", async ({ page }) => {
+test("landing turns the draft into a booking pass and flags guesses", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   let reads = 0;
   await page.route("**/api/parse", route => { reads++; const text = route.request().postDataJSON().text as string; return route.fulfill({ json: { ...request.appointment, entity: text.includes("Rashid") ? "Rashid Hospital" : "Appointment venue", assumed: text.includes("Rashid") ? [] : ["venue"], hidden: 1 } }); });
   await page.goto("/");
-  const panel = page.getByRole("figure", { name: "Ishara reads it as you type", exact: true });
-  await expect(panel.locator(".reading-empty")).toHaveCount(6);
+  await expect(page.getByRole("figure", { name: "Paste a message. Ishara turns it into a booking.", exact: true })).toBeVisible();
+  await expect(page.locator(".pass").first()).toContainText("Example");
   expect(reads).toBe(0);
   await page.getByLabel("Your appointment message").fill("Need someone for my check-up soon");
-  const reading = page.getByRole("figure", { name: "Here’s what Ishara understood", exact: true });
-  await expect(reading).toContainText("Appointment venue");
-  await expect(reading.locator(".inferred")).toHaveCount(1);
+  const pass = page.getByRole("figure", { name: "Your booking, as Ishara read it", exact: true });
+  await expect(pass.locator(".pass-back")).toContainText("Appointment venue");
+  await expect(pass.locator(".pass-back .pass-check")).toHaveCount(1);
   await page.getByRole("button", { name: "Hospital", exact: true }).click();
-  await expect(reading).toContainText("Rashid Hospital");
-  await expect(reading).toContainText("1 hidden before storage");
-  await expect(reading.locator(".inferred")).toHaveCount(0);
-  expect(await page.evaluate(() => !!document.querySelector(".paste-btn"))).toBe(false);
+  await expect(pass.locator(".pass-back")).toContainText("Rashid Hospital");
+  await expect(pass.locator(".pass-back")).toContainText("1 private detail hidden");
+  await expect(pass.locator(".pass-back .pass-check")).toHaveCount(0);
+  await expect(pass.locator(".pass").first()).toHaveAttribute("aria-hidden", "true");
   await page.getByLabel("Your appointment message").fill("");
-  await expect(page.getByRole("figure", { name: "Ishara reads it as you type", exact: true })).toBeVisible();
+  await expect(page.getByRole("figure", { name: "Paste a message. Ishara turns it into a booking.", exact: true })).toBeVisible();
   await openSettings(page);
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");
+});
+
+test("visit prep saves questions on this device and offers them in conversation", async ({ page }) => {
+  await page.addInitScript(() => Object.assign(window, { webkitSpeechRecognition: undefined, SpeechRecognition: undefined }));
+  await page.route("**/api/r/preview-token", route => route.fulfill({ json: { ...request, status: "confirmed", timeline: [] } }));
+  await page.goto("/r/preview-token");
+  const prep = page.getByRole("region", { name: "Prepare for your visit", exact: true });
+  await expect(prep.getByRole("link", { name: /Directions/ })).toHaveAttribute("href", /google\.com\/maps.*Rashid%20Hospital/);
+  const download = page.waitForEvent("download");
+  await prep.getByRole("button", { name: "Add to calendar", exact: true }).click();
+  expect((await download).suggestedFilename()).toBe("ishara-appointment.ics");
+  await prep.getByLabel("New question", { exact: true }).fill("Can I eat before the test?");
+  await prep.getByRole("button", { name: "Add question", exact: true }).click();
+  await expect(prep.getByRole("listitem")).toHaveCount(1);
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Prepare for your visit", exact: true }).getByRole("listitem")).toHaveText("Can I eat before the test?");
+  await page.getByRole("button", { name: "Conversation", exact: true }).click();
+  const bridge = page.getByRole("dialog", { name: "Conversation", exact: true });
+  await bridge.getByRole("button", { name: "Can I eat before the test?", exact: true }).click();
+  await expect(bridge.locator(".bridge-show p")).toHaveText("Can I eat before the test?");
 });
 
 test("new request shows the task, keeps extras collapsed, and Cancel preserves the draft", async ({ page }) => {

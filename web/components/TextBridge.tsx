@@ -29,7 +29,7 @@ const PHRASES = [
   ["Interpreter", "المترجم", "My sign language interpreter is on the way.", "مترجم لغة الإشارة في الطريق إليّ."],
 ];
 
-export function TextBridge({ onClose }: { onClose: () => void }) {
+export function TextBridge({ onClose, questions = [] }: { onClose: () => void; questions?: string[] }) {
   const { t, lang } = useLanguage();
   const dialog = useRef<HTMLDialogElement>(null);
   const list = useRef<HTMLOListElement>(null);
@@ -119,6 +119,7 @@ export function TextBridge({ onClose }: { onClose: () => void }) {
         <button className="btn" disabled={!staffDraft.trim()}>{t("Add", "إضافة")}</button>
       </form>}
       <div className="bridge-phrases" role="group" aria-label={t("Quick messages", "رسائل سريعة")}>
+        {questions.map(q => <button type="button" key={q} className="sample mine" dir="auto" onClick={() => reply(q)}>{q}</button>)}
         {PHRASES.map(([en, ar, sayEn, sayAr]) => <button type="button" key={en} className="sample" onClick={() => reply(staffIsArabic ? sayAr : sayEn, staffLang)}>{t(en, ar)}</button>)}
       </div>
       <form className="bridge-compose" onSubmit={e => { e.preventDefault(); reply(draft); setDraft(""); }}>

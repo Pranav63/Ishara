@@ -12,6 +12,7 @@ import { DisplaySettings, usePreferences } from "@/components/Preferences";
 import { ReviewAppointment } from "@/components/ReviewAppointment";
 import { StatusCard } from "@/components/StatusCard";
 import { TextBridge } from "@/components/TextBridge";
+import { VisitPrep, useVisitQuestions } from "@/components/VisitPrep";
 import { api } from "@/lib/api";
 import type { Lang } from "@/lib/preferences";
 import { areaName } from "@/lib/locale";
@@ -98,6 +99,7 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   useEffect(() => { if (data) setHistorySaved(rememberRequest(data.token)); }, [data?.token]);
   const [staff, setStaff] = useState(false);
   const [bridge, setBridge] = useState(false);
+  const [questions, setQuestions] = useVisitQuestions(token);
   const [failedVideo, setFailedVideo] = useState<string | null>(null);
   const t = T[prefs.lang];
   const flash = useVisualAlert(data ? `${data.status}:${data.assigned?.id ?? ""}:${data.arrival?.updated_at ?? ""}` : undefined, prefs.alerts && !prefs.textOnly && !prefs.reducedMotion);
@@ -138,7 +140,7 @@ export default function Requester({ params }: { params: Promise<{ token: string 
         {prefs.textOnly && <p className="small">{t.textHelp}</p>}
         {error && <p className="error" role="alert">{t.offline}</p>}
 
-        {data.status !== "reviewing" && <StatusCard status={data.status} kicker={t.your} title={statusText} arrival={arrivalText} place={a.entity} area={areaName(a.area, prefs.lang)} when={dayTime(a.starts_at, prefs.lang)} stages={t.stages} progressLabel={t.progress} />}
+        {data.status !== "reviewing" && <StatusCard key={data.status} status={data.status} kicker={t.your} title={statusText} arrival={arrivalText} place={a.entity} area={areaName(a.area, prefs.lang)} when={dayTime(a.starts_at, prefs.lang)} stages={t.stages} progressLabel={t.progress} />}
 
         {data.status === "reviewing" && <section className="card requester-review"><ReviewAppointment key={data.id} snap={data} onDone={refresh} primary /><details className="review-source"><summary>{prefs.lang === "ar" ? "رسالتك الأصلية" : "Your original message"}</summary><p dir="auto">{message}</p></details></section>}
 
@@ -184,6 +186,8 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           </section>
         )}
 
+        {!["reviewing", "parsing", "completed"].includes(data.status) && <VisitPrep snap={data} questions={questions} onQuestions={setQuestions} />}
+
         {data.status !== "reviewing" && data.timeline && <section className="card">
           <AgentTimeline items={data.timeline} status={data.status} waitingForCoordinator={data.status === "escalated" && data.escalation?.status !== "acknowledged"} />
         </section>}
@@ -196,7 +200,7 @@ export default function Requester({ params }: { params: Promise<{ token: string 
         </section>}
 
         {data.status !== "reviewing" && data.status !== "parsing" && <div className="action-bar"><button className="btn big" onClick={() => setBridge(true)}><MessagesSquare size={20} aria-hidden />{t.talk}</button><button className="btn primary big" onClick={() => setStaff(true)}><IdCard size={20} aria-hidden />{t.staff}</button></div>}
-        {bridge && <TextBridge onClose={() => setBridge(false)} />}
+        {bridge && <TextBridge questions={questions} onClose={() => setBridge(false)} />}
         {staff && <StaffCard name={who && confirmed ? who.name : null} arrival={arrival} label={t.staff} closeLabel={t.close} onClose={() => setStaff(false)} />}
       </main>
     </MotionRoot>

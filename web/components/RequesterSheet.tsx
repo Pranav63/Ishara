@@ -15,7 +15,7 @@ import { api } from "@/lib/api";
 import { SAMPLES, STATUS } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
 
-export function RequesterSheet({ snap, onCreated, composer = true, compose = false, onComposeChange, availability = "online", onRetry, onDraft }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean; compose?: boolean; onComposeChange?: (compose: boolean) => void; availability?: "checking" | "online" | "offline"; onRetry?: () => void; onDraft?: (text: string) => void }) {
+export function RequesterSheet({ snap, onCreated, composer = true, compose = false, onComposeChange, availability = "online", onRetry, onDraft, reading = false }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean; compose?: boolean; onComposeChange?: (compose: boolean) => void; availability?: "checking" | "online" | "offline"; onRetry?: () => void; onDraft?: (text: string) => void; reading?: boolean }) {
   const { t, lang } = useLanguage();
   const [min, setMin] = useState(false);
   const [text, setText] = useState("");
@@ -49,10 +49,10 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
       setText(""); onCreated(created);
     } catch (e) { setErr((e as Error).message); } finally { inFlight.current = false; setBusy(false); }
   }
-  return <m.section className={`sheet glass strong${min && !showForm ? " min" : ""}${showForm ? " is-composing" : ""}`} aria-label={t("Request an interpreter", "اطلب مترجماً")} layout transition={{ type: "spring", stiffness: 400, damping: 38 }}>
+  return <m.section className={`sheet glass strong${min && !showForm ? " min" : ""}${showForm ? " is-composing" : ""}${reading ? " is-reading" : ""}`} aria-label={t("Request an interpreter", "اطلب مترجماً")} layout transition={{ type: "spring", stiffness: 400, damping: 38 }}>
     <div className="sheet-head">
-      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Resident", "طالب الخدمة")} <bdi>{snap?.id}</bdi></p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Unnamed resident", "طالب خدمة دون اسم")}</h2>{showForm && <label htmlFor="msg">{t("Your appointment message", "رسالة موعدك")}</label>}</div>
-      {showForm && <AgentCompanion busy={busy} />}
+      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Resident", "طالب الخدمة")} <bdi>{snap?.id}</bdi></p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Unnamed resident", "طالب خدمة دون اسم")}</h2>{showForm && <label htmlFor="msg">{t("Your appointment message", "رسالة موعدك")}</label>}{reading && <span className="reading-status" aria-hidden>{t("Ishara is reading", "إشارة تقرأ")}</span>}</div>
+      {showForm && <AgentCompanion busy={busy || reading} />}
       {compose && <button type="button" className="request-cancel" onClick={() => { restoreFocus.current = true; onComposeChange?.(false); setErr(null); }}>{t("Cancel", "إلغاء")}</button>}
       {snap && !showForm && <button className="icon-btn" aria-label={min ? t("Expand conversation", "توسيع المحادثة") : t("Collapse conversation", "طي المحادثة")} aria-expanded={!min} onClick={() => setMin((v) => !v)}><m.span animate={{ rotate: min ? 180 : 0 }} style={{ display: "inline-flex" }}><ChevronDown size={18} aria-hidden /></m.span></button>}
     </div>
