@@ -1123,3 +1123,137 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 .text-only .agent-orb { display: none; }
 html.hc .agent-orb::before { background: var(--tint); }
 .request-form-foot:has(> p:empty):not(:has(button)) { margin-top: -10px; min-height: 0; }
+
+/* ---------- Liquid glass controls ---------- */
+.popover.up { top: auto; bottom: calc(100% + 10px); transform-origin: bottom; }
+.popover { border-radius: 22px; }
+.request-privacy .pop-trigger { gap: 6px; min-height: 40px; padding: 0 14px; font: inherit; font-size: 14px; font-weight: 600; color: var(--tint); }
+.privacy-tip { display: grid; gap: 10px; min-width: 210px; }
+.privacy-tip p { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.privacy-tip ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.privacy-tip li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 500; background: var(--tint-soft); color: var(--tint); }
+.request-privacy .pop-anchor, .request-options { position: relative; }
+
+/* Glass on every secondary control: translucent fill, blur, rim light, specular sheen. */
+.btn:not(.primary):not(.danger), .chip:not([aria-pressed="true"]), .sample, .request-privacy .pop-trigger, .j-btn, select, .prep-action {
+  background-image: var(--glass-shine);
+  -webkit-backdrop-filter: blur(18px) saturate(1.8); backdrop-filter: blur(18px) saturate(1.8);
+  box-shadow: inset 0 0.5px 0 var(--glass-rim), inset 0 0 0 0.5px color-mix(in srgb, var(--glass-rim) 40%, transparent), 0 1px 2px rgba(10, 20, 60, 0.06);
+}
+.btn:not(.primary):not(.danger), .chip:not([aria-pressed="true"]) { background-color: var(--glass); }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E"), var(--glass-shine); background-repeat: no-repeat; background-position: right 16px center, 0 0; background-size: auto, 100% 100%; background-color: var(--fill); border-color: transparent; }
+[dir="rtl"] select { background-position: left 16px center, 0 0; }
+.btn.primary, .btn.danger {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.55), 0 6px 18px color-mix(in srgb, var(--tint) 28%, transparent);
+}
+.btn.danger { box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.4); }
+.btn.primary:disabled { background-image: none; box-shadow: none; }
+textarea, input:not([type="checkbox"]) { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 1px 2px rgba(10, 20, 60, 0.05); }
+textarea:focus, input:focus { box-shadow: 0 0 0 4px var(--tint-soft); }
+@media (prefers-reduced-transparency: reduce) {
+  .btn, .chip, .sample, .j-btn, .prep-action, textarea, input, .request-privacy .pop-trigger { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background-image: none !important; }
+}
+html.hc :is(.btn, .chip, .sample, .prep-action, textarea, input) { background-image: none !important; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* ---------- Requests: wide glass sheet ---------- */
+.app-dialog { background: var(--glass-shine), var(--glass-thick); -webkit-backdrop-filter: blur(40px) saturate(1.8); backdrop-filter: blur(40px) saturate(1.8); box-shadow: inset 0 0.5px 0 var(--glass-rim), 0 0 0 0.5px var(--line), 0 40px 120px rgba(0, 0, 20, 0.35); }
+.app-dialog[open] { animation: dialog-in 0.5s cubic-bezier(0.32, 0.72, 0, 1); }
+.app-dialog[open]::backdrop { animation: fade-in 0.4s ease; }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(18px) scale(0.96); filter: blur(6px); } }
+@keyframes fade-in { from { opacity: 0; } }
+.app-dialog.wide { width: min(920px, calc(100% - 48px)); min-height: min(620px, calc(100dvh - 48px)); max-height: calc(100dvh - 48px); }
+.app-dialog.wide .app-dialog-head { padding: 26px 26px 8px 32px; }
+.app-dialog.wide .app-dialog-head h2 { font-size: 28px; }
+.app-dialog.wide .app-dialog-body { padding: 10px 32px 28px; display: flex; flex-direction: column; flex: 1; }
+@media (prefers-reduced-transparency: reduce) { .app-dialog { background: var(--surface) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } }
+html.hc .app-dialog { background: var(--surface); backdrop-filter: none; }
+
+.history-toolbar { gap: 12px; }
+.history-top { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 12px; align-items: center; }
+.history-views { position: relative; padding: 3px; background: var(--fill); }
+.history-views button { position: relative; min-height: 42px; color: var(--ink-2); }
+.history-views button > span:not(.seg-thumb) { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 7px; }
+.history-views button[aria-pressed="true"] { background: transparent; box-shadow: none; color: var(--ink); }
+html[data-theme="dark"] .history-views button[aria-pressed="true"] { background: transparent; }
+.seg-thumb { position: absolute; inset: 0; border-radius: 999px; background: var(--glass-shine), var(--surface-raised, var(--surface)); box-shadow: inset 0 0.5px 0 var(--glass-rim), 0 2px 10px rgba(0, 0, 30, 0.16); }
+html[data-theme="dark"] .seg-thumb { background: var(--glass-shine), #5a5a60; }
+.history-search { min-height: 48px; border-radius: 999px; padding-inline: 16px; background: var(--fill); box-shadow: inset 0 0.5px 0 var(--glass-rim); }
+.history-filter-row { grid-template-columns: minmax(0, 260px) auto; justify-content: start; }
+.history-filter-row > select, .history-filter-grid select { border-radius: 999px; min-height: 44px; }
+.history-filter-toggle svg:last-child { transition: transform 0.4s var(--ease); }
+.history-filter-fields { overflow: hidden; padding: 0; background: none; border-radius: 0; gap: 8px; }
+.history-filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border-radius: 22px; background: var(--fill); box-shadow: inset 0 0.5px 0 var(--glass-rim); }
+.history-filter-grid label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); min-width: 0; }
+.history-filter-grid input { min-height: 44px; border-radius: 999px; padding: 8px 14px; background: var(--surface); }
+.history-filter-fields > p { padding-inline: 6px; }
+.history-results { margin-top: 18px; }
+.request-history-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 12px; margin-top: 10px; padding: 0; background: none; border-radius: 0; }
+.request-history-list li { position: relative; display: flex; align-items: stretch; gap: 0; border-radius: 22px; background: var(--glass-shine), var(--surface); box-shadow: inset 0 0.5px 0 var(--glass-rim), 0 0 0 0.5px var(--line), 0 6px 20px rgba(0, 0, 30, 0.06); transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease); }
+.request-history-list li + li { border-top: 0; }
+.request-history-list li:hover { transform: translateY(-2px); box-shadow: inset 0 0.5px 0 var(--glass-rim), 0 0 0 0.5px var(--line), 0 14px 34px rgba(0, 0, 30, 0.14); }
+.request-history-list li::before { content: ""; position: absolute; inset-block: 18px; inset-inline-start: 0; width: 4px; border-radius: 0 4px 4px 0; background: var(--tone, var(--tint)); }
+[dir="rtl"] .request-history-list li::before { border-radius: 4px 0 0 4px; }
+.history-request { min-height: 120px; padding: 18px 8px 18px 22px; align-items: flex-start; border-radius: 22px; }
+[dir="rtl"] .history-request { padding: 18px 22px 18px 8px; }
+.history-request:hover { background: transparent; }
+.history-copy { display: grid; gap: 6px; }
+.history-request strong { font-size: 18px; font-weight: 650; letter-spacing: -0.015em; line-height: 1.25; }
+.history-request small { margin: 0; }
+.history-request .history-state { justify-self: start; display: inline-flex; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 650; color: var(--tone, var(--tint)); background: color-mix(in srgb, var(--tone, var(--tint)) 14%, transparent); }
+.history-when { display: inline-flex !important; align-items: center; gap: 6px; font-size: 14px !important; color: var(--ink) !important; font-weight: 500; }
+.history-when svg { color: var(--ink-3); }
+.history-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px !important; color: var(--ink-3) !important; }
+.history-request > svg { margin-top: 2px; transition: transform 0.4s var(--ease), color 0.3s; }
+.request-history-list li:hover .history-request > svg { color: var(--tint); transform: translate(2px, -2px); }
+.history-row-actions { flex-direction: column; justify-content: flex-end; padding: 10px; gap: 2px; }
+.tone-live { --tone: var(--tint); } .tone-warn { --tone: var(--saffron); } .tone-ok { --tone: var(--green); } .tone-bad { --tone: var(--rose); } .tone-done { --tone: var(--ink-3); }
+.history-empty { display: grid; place-items: center; gap: 8px; padding: 48px 16px; color: var(--ink-3); text-align: center; }
+.history-empty .history-status { margin: 0; color: var(--ink-2); }
+.history-scope { margin-top: auto; padding-top: 22px; display: flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; }
+.history-scope svg { flex: none; }
+@media (max-width: 700px) {
+  .history-top { grid-template-columns: minmax(0, 1fr); }
+  .history-filter-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .history-filter-grid { grid-template-columns: minmax(0, 1fr); }
+  .app-dialog.wide { width: calc(100% - 24px); height: auto; margin: auto 12px 12px; max-height: calc(100dvh - 24px); }
+  .app-dialog.wide .app-dialog-head { padding: 20px 16px 6px 22px; }
+  .app-dialog.wide .app-dialog-body { padding: 8px 16px 20px; }
+  .app-dialog.wide .app-dialog-head h2 { font-size: 22px; }
+}
+@media (max-width: 399px) { .history-filter-row { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Liquid droplet that flows between controls ---------- */
+.liquid-drop {
+  position: fixed; top: 0; left: 0; z-index: 90; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 60%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 2px rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 6px 22px rgba(10, 30, 90, 0.14);
+  mix-blend-mode: plus-lighter;
+}
+.liquid-drop.in-dialog { position: absolute; }
+html[data-theme="light"] .liquid-drop { mix-blend-mode: normal; background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08) 60%, transparent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(20, 40, 120, 0.1), 0 6px 20px rgba(20, 40, 120, 0.12); }
+@media (prefers-color-scheme: light) { html:not([data-theme="dark"]) .liquid-drop { mix-blend-mode: normal; } }
+html.hc .liquid-drop { display: none; }
+
+/* Slower, springier presses on every control. */
+.btn, .chip, .sample, .icon-btn, .j-btn, .prep-action, .pop-trigger { transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.4s var(--ease), color 0.3s, box-shadow 0.4s var(--ease), opacity 0.3s; }
+:is(.btn, .chip, .sample, .j-btn, .prep-action, .pop-trigger):active { transform: scale(0.95); transition-duration: 0.12s; }
+.icon-btn:active { transform: scale(0.88); transition-duration: 0.12s; }
+.history-search input, .history-search input:focus { box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.request-history-list li::before { inset-inline-start: 8px; width: 3px; border-radius: 3px; }
+
+/* ---------- Liquid tabs: separate glass tabs, one drop of selection that flows between them ---------- */
+.liquid-tabs { position: relative; display: flex; gap: 10px; padding: 0; background: none !important; box-shadow: none; border-radius: 0; }
+.liquid-tabs > button { position: relative; flex: 1; min-height: 42px; padding: 6px 16px; border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink-2); cursor: pointer;
+  background: var(--glass-shine), var(--fill); box-shadow: inset 0 0.5px 0 var(--glass-rim), inset 0 0 0 0.5px color-mix(in srgb, var(--glass-rim) 35%, transparent);
+  transition: color 0.6s var(--ease), background-color 0.6s var(--ease); }
+.liquid-tabs > button[aria-pressed="true"] { color: var(--on-tint); font-weight: 600; background: transparent; box-shadow: none; }
+.liquid-tabs > button > span { position: relative; display: inline-flex; align-items: center; gap: 7px; }
+.liquid-thumb { position: absolute; top: 0; left: 0; z-index: 1; border-radius: 999px; pointer-events: none; transform-origin: center;
+  background: radial-gradient(120% 140% at 50% 0%, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 55%), var(--tint);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(0, 0, 40, 0.18), 0 6px 18px color-mix(in srgb, var(--tint) 35%, transparent); }
+.liquid-tabs > button > span { z-index: 2; }
+html.hc .liquid-thumb { box-shadow: none; outline: 2px solid var(--ink); }
+.workspace-switch.liquid-tabs { gap: 6px; }
+.workspace-switch.liquid-tabs > button { min-height: 40px; padding-block: 4px; }
+@media (max-width: 899px) { .header-navigation .workspace-switch.liquid-tabs > button { padding-inline: 4px; font-size: 13px; } }

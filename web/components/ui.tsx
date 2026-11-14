@@ -4,7 +4,7 @@ import { AnimatePresence, m } from "motion/react";
 import { Info, X } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
-export function Modal({ open, onClose, title, closeLabel, children }: { open: boolean; onClose: () => void; title: string; closeLabel: string; children: React.ReactNode }) {
+export function Modal({ open, onClose, title, closeLabel, children, wide }: { open: boolean; onClose: () => void; title: string; closeLabel: string; children: React.ReactNode; wide?: boolean }) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -14,7 +14,7 @@ export function Modal({ open, onClose, title, closeLabel, children }: { open: bo
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previous; };
   }, [open]);
-  return <dialog ref={dialog} className="app-dialog" aria-labelledby={id} onClose={onClose} onClick={(e) => {
+  return <dialog ref={dialog} className={`app-dialog${wide ? " wide" : ""}`} aria-labelledby={id} onClose={onClose} onClick={(e) => {
     if (e.target !== e.currentTarget) return;
     const bounds = e.currentTarget.getBoundingClientRect();
     if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) e.currentTarget.close();
@@ -25,7 +25,7 @@ export function Modal({ open, onClose, title, closeLabel, children }: { open: bo
 }
 
 // Small popover anchored to its trigger. Closes on Escape or an outside click.
-export function Popover({ trigger, label, children, align = "start", wide }: { trigger: React.ReactNode; label: string; children: React.ReactNode | ((close: () => void) => React.ReactNode); align?: "start" | "end"; wide?: boolean }) {
+export function Popover({ trigger, label, children, align = "start", wide, up }: { trigger: React.ReactNode; label: string; children: React.ReactNode | ((close: () => void) => React.ReactNode); align?: "start" | "end"; wide?: boolean; up?: boolean }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const ref = useRef<HTMLSpanElement>(null);
@@ -68,7 +68,7 @@ export function Popover({ trigger, label, children, align = "start", wide }: { t
       </button>
       <AnimatePresence>
         {open && (
-          <m.div ref={setPanel} id={id} role="dialog" aria-label={label} className={`popover glass ${align}${wide ? " wide" : ""}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }} transition={{ type: "spring", stiffness: 500, damping: 34 }}>
+          <m.div ref={setPanel} id={id} role="dialog" aria-label={label} className={`popover glass ${align}${wide ? " wide" : ""}${up ? " up" : ""}`} initial={{ opacity: 0, y: up ? 8 : -8, scale: 0.9, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, scale: 0.96, filter: "blur(4px)", transition: { duration: 0.14 } }} transition={{ type: "spring", stiffness: 420, damping: 30 }}>
             {typeof children === "function" ? children(close) : children}
             <PopoverClose onClose={close} />
           </m.div>

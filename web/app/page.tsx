@@ -3,8 +3,7 @@
 import { Activity, ArrowRight, ChevronDown, CircleHelp, Menu, Play, Send, Settings2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
-import { m } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RequestHistory } from "@/components/RequestHistory";
 import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/components/Chrome";
@@ -12,6 +11,7 @@ import { Header } from "@/components/Header";
 import { HomePreview, useDraftReading } from "@/components/HomePreview";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Story } from "@/components/Story";
+import { LiquidThumb } from "@/components/LiquidThumb";
 import { LiveMap } from "@/components/LiveMap";
 import { MotionRoot } from "@/components/Motion";
 import { OfferDock } from "@/components/OfferDock";
@@ -36,6 +36,7 @@ export default function Console() {
   const [telegram, setTelegram] = useState<string | null>(null);
   const [serviceState, setServiceState] = useState<"checking" | "online" | "offline">("checking");
   const [mode, setMode] = useState<"resident" | "coordinator">("resident");
+  const workspace = useRef<HTMLDivElement>(null);
   const [compose, setCompose] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -66,8 +67,9 @@ export default function Console() {
 
   return <MotionRoot><div className={`${coordinator ? "console-view" : "resident-home"}${drawer ? " drawer-open" : ""}`}>
     <Header status={coordinator ? activeSnap?.status : undefined} navigation={<>
-      {session?.authenticated && <div className="workspace-switch" role="group" aria-label={t("Workspace", "مساحة العمل")}>
-        {(["resident", "coordinator"] as const).map(value => <button type="button" key={value} aria-pressed={mode === value} onClick={() => { setMode(value); setDrawer(false); }}>{mode === value && <m.span className="workspace-selection" layoutId="workspace-selection" transition={{ duration: .22, ease: [.22, 1, .36, 1] }} />}<span>{value === "resident" ? t("Requester", "طالب الخدمة") : t("Coordinator", "المنسق")}</span></button>)}
+      {session?.authenticated && <div ref={workspace} className="workspace-switch liquid-tabs" role="group" aria-label={t("Workspace", "مساحة العمل")}>
+        <LiquidThumb group={workspace} index={mode === "resident" ? 0 : 1} />
+        {(["resident", "coordinator"] as const).map(value => <button type="button" key={value} aria-pressed={mode === value} onClick={() => { setMode(value); setDrawer(false); }}><span>{value === "resident" ? t("Requester", "طالب الخدمة") : t("Coordinator", "المنسق")}</span></button>)}
       </div>}
       <RequestHistory key={coordinator ? "coordinator" : "requester"} coordinator={coordinator} onSelect={value => { setCreated(value); setSelectedId(value.id); setCompose(false); setDrawer(false); }} />
     </>}>

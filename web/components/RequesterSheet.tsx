@@ -1,13 +1,14 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRight, ArrowUpRight, ChevronDown, Clock, GraduationCap, IdCard, MapPin, Plus, ShieldCheck, Stethoscope } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronDown, Clock, GraduationCap, IdCard, MapPin, Mail, Phone, Plus, ShieldCheck, Stethoscope } from "lucide-react";
 
 const SAMPLE_ICONS = [Stethoscope, IdCard, GraduationCap];
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AgentCompanion } from "@/components/AgentCompanion";
 import { useLanguage } from "@/components/Preferences";
+import { Popover } from "@/components/ui";
 import { ReviewAppointment } from "@/components/ReviewAppointment";
 import { Thread } from "@/components/Thread";
 import { rememberRequest } from "@/lib/request-history";
@@ -75,7 +76,7 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
         </div>
         <div className="request-options">
           <details className="optional-name"><summary><Plus size={16} aria-hidden />{t("Add your name", "أضف اسمك")} <span className="optional-hint">{t("(optional)", "(اختياري)")}</span></summary><div className="request-extra-body"><label className="sr-only" htmlFor="requester-name">{t("Your name", "اسمك")}</label><input id="requester-name" name="name" autoComplete="given-name" dir="auto" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Your name", "اسمك")} /></div></details>
-          <details className="request-privacy"><summary><ShieldCheck size={15} aria-hidden />{t("Privacy", "الخصوصية")}</summary><p>{t("Phone numbers, email addresses and ID numbers are hidden before storage.", "تُحجب أرقام الهاتف والهوية وعناوين البريد قبل التخزين.")}</p></details>
+          <span className="request-privacy"><Popover up align="end" label={t("Privacy", "الخصوصية")} trigger={<><ShieldCheck size={15} aria-hidden />{t("Privacy", "الخصوصية")}</>}><div className="privacy-tip"><p>{t("Hidden before storage:", "تُحجب قبل التخزين:")}</p><ul><li><Phone size={14} aria-hidden />{t("Phone numbers", "أرقام الهاتف")}</li><li><Mail size={14} aria-hidden />{t("Emails", "البريد")}</li><li><IdCard size={14} aria-hidden />{t("ID numbers", "أرقام الهوية")}</li></ul></div></Popover></span>
         </div>
         <button className="btn primary big request-continue" type="submit" aria-describedby="request-service" disabled={availability !== "online" || busy || text.trim().length < 8}>{availability === "checking" ? t("Checking service…", "جارٍ التحقق من الخدمة…") : availability === "offline" ? t("Service unavailable", "الخدمة غير متاحة") : busy ? t("Reading your message…", "جارٍ قراءة رسالتك…") : t("Review appointment", "مراجعة الموعد")}{availability === "online" && <ArrowRight size={18} aria-hidden />}</button>
         <div className="request-form-foot"><p id="request-service" role="status">{availability === "offline" ? t("Service unavailable. You can keep writing.", "الخدمة غير متاحة. يمكنك متابعة الكتابة.") : ""}</p>{availability === "offline" && onRetry && <button type="button" className="request-retry" onClick={onRetry}>{t("Try again", "حاول مجدداً")}</button>}</div>

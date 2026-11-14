@@ -557,7 +557,7 @@ test("new request shows the task, keeps extras collapsed, and Cancel preserves t
   await expect(sheet.getByRole("textbox")).toHaveCount(1);
   await expect(sheet.getByRole("button", { name: "Hospital", exact: true })).toBeVisible();
   await expect(sheet.getByLabel("Your name", { exact: true })).toBeHidden();
-  await expect(sheet.locator(".request-privacy p")).toBeHidden();
+  await expect(sheet.locator(".request-privacy .popover")).toBeHidden();
   await expect(sheet.getByRole("button", { name: "Review appointment", exact: true })).toBeDisabled();
   await expect(sheet.getByLabel("Your appointment message")).toBeFocused();
   await sheet.getByLabel("Your appointment message").fill("My appointment draft");
@@ -611,10 +611,10 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
     const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true });
     await expect(review).toBeEnabled();
     await review.scrollIntoViewIfNeeded();
-    const privacy = page.locator(".request-privacy summary");
+    const privacy = page.locator(".request-privacy .pop-trigger");
     await privacy.focus();
     await page.keyboard.press("Enter");
-    await expect(page.locator(".request-privacy p")).toBeVisible();
+    await expect(page.locator(".request-privacy .popover")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const rect = await review.boundingBox();
     expect(rect!.width).toBeGreaterThanOrEqual(44);

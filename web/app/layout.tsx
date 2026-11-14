@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { LiquidCursor } from "@/components/LiquidCursor";
 import { PreferencesProvider } from "@/components/Preferences";
 
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <PreferencesProvider><a className="skip" href="#main">Skip to content / انتقل إلى المحتوى</a>
-        {children}</PreferencesProvider>
+        {children}<LiquidCursor /></PreferencesProvider>
       </body>
     </html>
   );
