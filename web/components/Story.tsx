@@ -79,10 +79,10 @@ const reveal = { hidden: { opacity: 0, y: 40, scale: 0.97 }, shown: (i: number) 
 function Ready({ still }: { still: boolean }) {
   const { t } = useLanguage();
   const tiles = [
-    { key: "captions", Icon: Mic, title: t("Live captions at the desk", "ترجمة نصية مباشرة عند المكتب"), body: t("What staff say appears as large text. You reply by typing.", "يظهر كلام الموظفين نصاً كبيراً، وترد بالكتابة."), visual: <p className="tile-caption">{t("Do you have your Emirates ID?", "هل معك الهوية الإماراتية؟")}<span className="tile-cursor" /></p> },
-    { key: "staff", Icon: IdCard, title: t("One tap tells reception", "نقرة واحدة تُعلم الاستقبال"), body: t("A full-screen card explains you are Deaf and your interpreter is coming.", "بطاقة بملء الشاشة توضّح أنك أصم وأن مترجمك قادم."), visual: <p className="tile-staff">{t("I am Deaf. My interpreter is on the way.", "أنا أصم. مترجمي في الطريق.")}</p> },
-    { key: "plan", Icon: CalendarPlus, title: t("Calendar and directions", "التقويم والاتجاهات"), body: t("Add the visit to your calendar and open the route in one tap.", "أضف الزيارة إلى تقويمك وافتح الطريق بنقرة."), visual: <div className="tile-icons"><CalendarPlus size={28} /><Navigation size={28} /></div> },
-    { key: "backup", Icon: RefreshCw, title: t("A backup is always ready", "بديل جاهز دائماً"), body: t("If your interpreter cancels, the backup is offered the visit at once.", "إذا اعتذر مترجمك، يُعرض الموعد على البديل فوراً."), visual: <div className="tile-swap"><span>MA</span><RefreshCw size={20} /><span className="on">OK</span></div> },
+    { key: "captions", Icon: Mic, title: t("Live captions", "ترجمة نصية مباشرة"), body: t("Staff speech, as large text.", "كلام الموظفين نصاً كبيراً."), visual: <p className="tile-caption">{t("Do you have your Emirates ID?", "هل معك الهوية الإماراتية؟")}<span className="tile-cursor" /></p> },
+    { key: "staff", Icon: IdCard, title: t("Show to staff", "اعرض على الموظفين"), body: t("One tap explains it at reception.", "نقرة واحدة توضّح الأمر للاستقبال."), visual: <p className="tile-staff">{t("I am Deaf. My interpreter is on the way.", "أنا أصم. مترجمي في الطريق.")}</p> },
+    { key: "plan", Icon: CalendarPlus, title: t("Calendar and directions", "التقويم والاتجاهات"), body: t("Save the visit. Get the route.", "احفظ الزيارة واعرف الطريق."), visual: <div className="tile-icons"><CalendarPlus size={28} /><Navigation size={28} /></div> },
+    { key: "backup", Icon: RefreshCw, title: t("Backup interpreter", "مترجم احتياطي"), body: t("If anyone cancels, the backup steps in.", "إذا اعتذر أحد، يتولى البديل."), visual: <div className="tile-swap"><span>MA</span><RefreshCw size={20} /><span className="on">OK</span></div> },
   ];
   return <section className="story-ready" aria-labelledby="ready-title">
     <h2 id="ready-title" className="story-heading">{t("Ready for the visit", "جاهز للزيارة")}</h2>
