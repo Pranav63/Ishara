@@ -26,9 +26,9 @@ export function ArrivalControls({ token, requestId, arrival, onDone }: { token: 
 
   return (
     <section className="arrival-controls" aria-label={t("Share your arrival time", "شارك وقت وصولك")}>
-      <h3>{t("Share your arrival time", "شارك وقت وصولك")}</h3>
+      <h3>{t("Arrival", "الوصول")}</h3>
       <p className="small muted" role="status" aria-atomic="true">
-        {arrival ? arrival.arrived ? t("You reported that you have arrived.", "أبلغت عن وصولك.") : t(`You shared an estimated arrival of ${clock(arrival.eta)}.`, `شاركت وقت وصول متوقعاً الساعة ${clock(arrival.eta)}.`) : t("Tell the resident when to expect you. This is your estimate, without GPS tracking.", "أبلغ طالب الخدمة بوقت وصولك المتوقع. هذا تقديرك، دون تتبع الموقع.")}
+        {arrival ? arrival.arrived ? t("You reported that you have arrived.", "أبلغت عن وصولك.") : t(`You shared an estimated arrival of ${clock(arrival.eta)}.`, `شاركت وقت وصول متوقعاً الساعة ${clock(arrival.eta)}.`) : t("Tell the resident when to expect you. No GPS tracking.", "أبلغ طالب الخدمة بوقت وصولك. دون تتبع الموقع.")}
       </p>
       <div className="arrival-actions">
         {[5, 10, 15].map((minutes) => <button key={minutes} className="btn small" disabled={busy} onClick={() => share(minutes)} aria-label={t(`I will arrive in ${minutes} minutes`, `سأصل خلال ${minutes} دقيقة`)}>{minutes} {t("min", "دقيقة")}</button>)}

@@ -104,7 +104,9 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   const t = T[prefs.lang];
   const flash = useVisualAlert(data ? `${data.status}:${data.assigned?.id ?? ""}:${data.arrival?.updated_at ?? ""}` : undefined, prefs.alerts && !prefs.textOnly && !prefs.reducedMotion);
 
-  const root = `phone requester-phone${data?.status === "reviewing" ? " is-reviewing" : ""}`;
+  const [demo, setDemo] = useState(false);
+  useEffect(() => { api.config().then(c => setDemo(c.demo)).catch(() => {}); }, []);
+  const root = `phone requester-phone${data ? " is-reviewing" : ""}`;
   if (error && !data) return <main id="main" className={root} lang={prefs.lang} dir={prefs.lang === "ar" ? "rtl" : "ltr"}><div className="card"><h1>{t.invalid}</h1><button className="btn" onClick={refresh}>{t.retry}</button></div></main>;
   if (!data) return <main id="main" className={root} lang={prefs.lang} aria-busy="true"><p role="status">{t.loading}</p></main>;
 
@@ -118,6 +120,8 @@ export default function Requester({ params }: { params: Promise<{ token: string 
   const summary = data.summary ? (prefs.lang === "ar" ? data.summary.ar ?? data.summary.en : data.summary.en) : null;
   const message = data.message.replace(/\[([A-Z_]+)\]/g, () => prefs.lang === "ar" ? "(تم حجب بيانات خاصة)" : "(private detail hidden)");
   const arrival = data.status === "confirmed" ? data.arrival : null;
+  const asked = (data.timeline ?? []).filter(e => e.kind === "offered").length;
+  const ar = prefs.lang === "ar";
   const minutes = arrival ? Math.ceil((arrival.eta - data.now) / 60) : 0;
   let arrivalText = "";
   if (who && data.status === "confirmed" && !error) {
@@ -140,8 +144,6 @@ export default function Requester({ params }: { params: Promise<{ token: string 
         {prefs.textOnly && <p className="small">{t.textHelp}</p>}
         {error && <p className="error" role="alert">{t.offline}</p>}
 
-        {data.status !== "reviewing" && <StatusCard key={data.status} status={data.status} kicker={t.your} title={statusText} arrival={arrivalText} place={a.entity} area={areaName(a.area, prefs.lang)} when={dayTime(a.starts_at, prefs.lang)} stages={t.stages} progressLabel={t.progress} />}
-
         {data.status === "reviewing" && <div className="review-layout">
           <section className="card requester-review"><ReviewAppointment key={data.id} snap={data} onDone={refresh} primary /></section>
           <aside className="review-aside">
@@ -158,6 +160,9 @@ export default function Requester({ params }: { params: Promise<{ token: string 
           </aside>
         </div>}
 
+        {data.status !== "reviewing" && <div className="status-layout"><div className="status-col">
+        <StatusCard key={data.status} status={data.status} kicker={t.your} title={statusText} arrival={arrivalText} place={a.entity} area={areaName(a.area, prefs.lang)} when={dayTime(a.starts_at, prefs.lang)} stages={t.stages} progressLabel={t.progress} />
+
         {data.status === "escalated" && (
           <section className="card" aria-labelledby="remote-title">
             <h2>{t.coordinator}</h2>
@@ -173,7 +178,7 @@ export default function Requester({ params }: { params: Promise<{ token: string 
         )}
 
 
-        {data.status !== "reviewing" && data.status !== "parsing" && <section className="card">
+        {data.status !== "parsing" && <section className="card">
           <p className="muted small">{t.interpreter}</p>
           {who && confirmed ? (
             <div className="who">
@@ -184,8 +189,11 @@ export default function Requester({ params }: { params: Promise<{ token: string 
                 {arrival && <p className="small num">{t.reported} {time(arrival.updated_at, prefs.lang)}</p>}
               </div>
             </div>
-          ) : (
-            <p>{data.status === "escalated" ? t.noLocal : t.pending}</p>
+          ) : data.status === "escalated" ? <p>{t.noLocal}</p> : (
+            <div className="searching">
+              <div className="radar" aria-hidden><span /><span /><span /><i>{asked || "…"}</i></div>
+              <div><h2>{asked ? (prefs.lang === "ar" ? `عرضنا الطلب على ${asked} من المترجمين القريبين` : `Asked ${asked} nearby interpreter${asked === 1 ? "" : "s"}`) : (prefs.lang === "ar" ? "نبحث عن مترجمين قريبين" : "Looking for nearby interpreters")}</h2><p className="muted">{t.pending}</p></div>
+            </div>
           )}
         </section>}
 
@@ -202,16 +210,26 @@ export default function Requester({ params }: { params: Promise<{ token: string 
 
         {!["reviewing", "parsing", "completed"].includes(data.status) && <VisitPrep snap={data} questions={questions} onQuestions={setQuestions} />}
 
-        {data.status !== "reviewing" && data.timeline && <section className="card">
-          <AgentTimeline items={data.timeline} status={data.status} waitingForCoordinator={data.status === "escalated" && data.escalation?.status !== "acknowledged"} />
-        </section>}
 
-        {data.status !== "reviewing" && <section className="card" aria-label={t.messages}>
+        <section className="card" aria-label={t.messages}>
           <p className="muted small">{t.messages}</p>
           <div className="bubble them" dir="auto">{message}</div>
           {conf && <div className="bubble us" lang={prefs.lang === "ar" && data.confirmation?.ar ? "ar" : "en"} dir="auto">{conf}</div>}
           {summary && <div className="bubble us" lang={prefs.lang === "ar" && data.summary?.ar ? "ar" : "en"} dir="auto"><strong>{t.summary}</strong><br />{summary}</div>}
-        </section>}
+        </section>
+        </div>
+        <aside className="status-side">
+          {demo && ["dispatching", "replanning", "confirmed"].includes(data.status) && <section className="demo-guide" aria-labelledby="demo-title">
+            <span className="demo-badge">{ar ? "وضع العرض" : "Demo"}</span>
+            <h2 id="demo-title">{data.status === "confirmed" ? (ar ? "مثّل دور المترجم في الزيارة" : "Play the interpreter on the day") : (ar ? "مثّل دور المترجم" : "Play the interpreter")}</h2>
+            <p>{data.status === "confirmed" ? (ar ? "يشارك المترجم وقت وصوله ويُكمل الزيارة من هاتفه." : "The interpreter shares an arrival time and completes the visit from their phone.") : (ar ? "في الاستخدام الحقيقي يصل العرض إلى هاتف المترجم ويقبله بنفسه. لا أحد في إشارة يوافق عليه." : "In real use the offer reaches each interpreter’s phone and they accept it there. Nobody at Ishara approves it.")}</p>
+            <a className="btn primary" href={`/?coordinator=${encodeURIComponent(data.id)}`} target="_blank" rel="noopener">{ar ? "افتح هواتف المترجمين" : "Open interpreter phones"}<span className="sr-only"> ({t.newTab})</span></a>
+          </section>}
+          {data.timeline && <section className="card">
+            <AgentTimeline items={data.timeline} status={data.status} waitingForCoordinator={data.status === "escalated" && data.escalation?.status !== "acknowledged"} />
+          </section>}
+        </aside>
+        </div>}
 
         {data.status !== "reviewing" && data.status !== "parsing" && <div className="action-bar"><button className="btn big" onClick={() => setBridge(true)}><MessagesSquare size={20} aria-hidden />{t.talk}</button><button className="btn primary big" onClick={() => setStaff(true)}><IdCard size={20} aria-hidden />{t.staff}</button></div>}
         {bridge && <TextBridge questions={questions} onClose={() => setBridge(false)} />}

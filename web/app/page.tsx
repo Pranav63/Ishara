@@ -49,6 +49,13 @@ export default function Console() {
     const poll = setInterval(checkService, 15000);
     return () => clearInterval(poll);
   }, [checkService]);
+  // A requester demo page links here to answer as the interpreters for one request.
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get("coordinator");
+    if (!id) return;
+    setMode("coordinator"); setSelectedId(id);
+    history.replaceState(null, "", "/");
+  }, []);
   function retryService() { setServiceState("checking"); checkService(); }
   const coordinator = mode === "coordinator" && session?.authenticated === true;
   const { data, error, refresh } = useLive(() => load(selectedId), { enabled: coordinator });
