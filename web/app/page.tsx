@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRight, CircleHelp, Menu, Play, Settings2, X } from "lucide-react";
+import { Activity, ArrowRight, ChevronDown, CircleHelp, Menu, Play, Send, Settings2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -11,6 +11,7 @@ import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/compone
 import { Header } from "@/components/Header";
 import { HomePreview, useDraftReading } from "@/components/HomePreview";
 import { HowItWorks } from "@/components/HowItWorks";
+import { Story } from "@/components/Story";
 import { LiveMap } from "@/components/LiveMap";
 import { MotionRoot } from "@/components/Motion";
 import { OfferDock } from "@/components/OfferDock";
@@ -32,6 +33,7 @@ export default function Console() {
   const router = useRouter();
   const [session, setSession] = useState<OperatorSession | null>(null);
   const [authRequired, setAuthRequired] = useState(true);
+  const [telegram, setTelegram] = useState<string | null>(null);
   const [serviceState, setServiceState] = useState<"checking" | "online" | "offline">("checking");
   const [mode, setMode] = useState<"resident" | "coordinator">("resident");
   const [compose, setCompose] = useState(false);
@@ -40,7 +42,7 @@ export default function Console() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [created, setCreated] = useState<Snapshot | null>(null);
   const [draft, setDraft] = useState("");
-  const checkService = useCallback(() => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setServiceState("online"); }).catch(() => setServiceState("offline")), []);
+  const checkService = useCallback(() => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setTelegram(config.telegram); setServiceState("online"); }).catch(() => setServiceState("offline")), []);
   useEffect(() => {
     checkService();
     const poll = setInterval(checkService, 15000);
@@ -86,13 +88,16 @@ export default function Console() {
     <DisplaySettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     <HowItWorks open={helpOpen} onClose={() => setHelpOpen(false)} />
     {coordinator && <OfflineBanner online={availability !== "offline"} />}
-    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-grid">
+    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-main"><div className="resident-grid">
       <section className="resident-intro">
         <h1>{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
-        <p className="intro-description">{t("Paste your appointment message. Ishara finds a certified interpreter and keeps you updated in text.", "ألصق رسالة موعدك. تجد إشارة مترجماً معتمداً وتبقيك على اطلاع بالنص.")}</p>
+        <p className="intro-description">{t("Paste the appointment you received by SMS, email or WhatsApp. Ishara books a certified interpreter and only messages you when something changes.", "ألصق رسالة الموعد التي وصلتك عبر الرسائل النصية أو البريد أو واتساب. تحجز إشارة مترجماً معتمداً ولا تراسلك إلا عند حدوث تغيير.")}</p>
       </section>
-      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onDraft={setDraft} reading={draftReading.busy} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
+      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onDraft={setDraft} reading={draftReading.busy} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} />{telegram && <p className="telegram-note"><Send size={15} aria-hidden />{t("Prefer Telegram? Forward the message to ", "تفضّل تيليجرام؟ أعد توجيه الرسالة إلى ")}<a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer" dir="ltr">@{telegram}</a>{t(" and get updates there.", " واستلم التحديثات هناك.")}</p>}<p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
       <HomePreview reading={draftReading.reading} busy={draftReading.busy} />
+      <a className="story-link" href="#how-it-works"><ChevronDown size={16} aria-hidden />{t("How it works", "كيف تعمل")}</a>
+    </div>
+    <Story />
     </main>}
   </div></MotionRoot>;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { m, useMotionValue, useSpring, useTransform } from "motion/react";
-import { Hand, ShieldCheck } from "lucide-react";
+import { Hand, Play, ShieldCheck } from "lucide-react";
+import { Journey } from "@/components/Journey";
 import { useEffect, useState } from "react";
 import { useLanguage, usePreferences } from "@/components/Preferences";
 import { api } from "@/lib/api";
@@ -43,12 +44,17 @@ export function HomePreview({ reading, busy }: { reading: Reading | null; busy: 
   const guessed = (...keys: string[]) => !!reading && keys.some(k => reading.assumed.includes(k));
   const domain = reading ? DOMAINS[reading.domain] ?? DOMAINS.other : null;
   const mine = reading !== null;
+  const [journey, setJourney] = useState(false);
+  useEffect(() => { if (mine) setJourney(false); }, [mine]);
+  const showJourney = journey && !mine;
 
   return <figure className="pass-stage" aria-labelledby="pass-caption"
     onPointerMove={e => { if (still) return; const r = e.currentTarget.getBoundingClientRect(); x.set((e.clientX - r.left) / r.width - 0.5); y.set((e.clientY - r.top) / r.height - 0.5); }}
     onPointerLeave={() => { x.set(0); y.set(0); }}>
-    <figcaption id="pass-caption" className="pass-caption">{mine ? t("Your booking, as Ishara read it", "حجزك كما قرأته إشارة") : t("Paste a message. Ishara turns it into a booking.", "ألصق رسالة، وتحوّلها إشارة إلى حجز.")}</figcaption>
-    <div className="pass-float">
+    <figcaption id="pass-caption" className={showJourney ? "sr-only" : "pass-caption"}>{mine ? t("Your booking, as Ishara read it", "حجزك كما قرأته إشارة") : t("Paste a message. Ishara turns it into a booking.", "ألصق رسالة، وتحوّلها إشارة إلى حجز.")}</figcaption>
+    {showJourney ? <Journey onExit={() => setJourney(false)} /> : <>
+    {!mine && <button type="button" className="journey-start" onClick={() => setJourney(true)}><Play size={15} aria-hidden />{t("See the journey", "شاهد الرحلة")}</button>}
+    <div className="pass-float" onClick={() => { if (!mine) setJourney(true); }}>
       <m.div className="pass-tilt" style={still ? undefined : { rotateX, rotateY }}>
         <m.div className="pass-flip" animate={{ rotateY: mine ? 180 : 0 }} transition={{ type: "spring", stiffness: 70, damping: 14 }}>
           <article className="pass" aria-hidden={mine}>
@@ -81,5 +87,6 @@ export function HomePreview({ reading, busy }: { reading: Reading | null; busy: 
         </m.div>
       </m.div>
     </div>
+    </>}
   </figure>;
 }

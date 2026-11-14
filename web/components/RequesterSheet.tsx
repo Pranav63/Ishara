@@ -51,13 +51,13 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
   }
   return <m.section className={`sheet glass strong${min && !showForm ? " min" : ""}${showForm ? " is-composing" : ""}${reading ? " is-reading" : ""}`} aria-label={t("Request an interpreter", "اطلب مترجماً")} layout transition={{ type: "spring", stiffness: 400, damping: 38 }}>
     <div className="sheet-head">
-      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Resident", "طالب الخدمة")} <bdi>{snap?.id}</bdi></p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Unnamed resident", "طالب خدمة دون اسم")}</h2>{showForm && <label htmlFor="msg">{t("Your appointment message", "رسالة موعدك")}</label>}{reading && <span className="reading-status" aria-hidden>{t("Ishara is reading", "إشارة تقرأ")}</span>}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>{!showForm && <p className="section-kicker">{t("Resident", "طالب الخدمة")} <bdi>{snap?.id}</bdi></p>}<h2>{showForm ? t("New request", "طلب جديد") : snap?.requester_name || t("Unnamed resident", "طالب خدمة دون اسم")}</h2>{showForm && <label htmlFor="msg">{t("Your appointment message", "رسالة موعدك")}</label>}{showForm && <p id="msg-help" className="msg-help">{t("Copy it from the SMS, email or WhatsApp you received. Typing the details works too.", "انسخها من الرسالة النصية أو البريد أو واتساب. يمكنك أيضاً كتابة التفاصيل.")}</p>}{reading && <span className="reading-status" aria-hidden>{t("Ishara is reading", "إشارة تقرأ")}</span>}</div>
       {showForm && <AgentCompanion busy={busy || reading} />}
       {compose && <button type="button" className="request-cancel" onClick={() => { restoreFocus.current = true; onComposeChange?.(false); setErr(null); }}>{t("Cancel", "إلغاء")}</button>}
       {snap && !showForm && <button className="icon-btn" aria-label={min ? t("Expand conversation", "توسيع المحادثة") : t("Collapse conversation", "طي المحادثة")} aria-expanded={!min} onClick={() => setMin((v) => !v)}><m.span animate={{ rotate: min ? 180 : 0 }} style={{ display: "inline-flex" }}><ChevronDown size={18} aria-hidden /></m.span></button>}
     </div>
     <AnimatePresence initial={false}>{(!min || showForm) && <m.div className="sheet-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      {snap && st && !showForm && <div className="appt">
+      {snap && st && !showForm && snap.status !== "reviewing" && <div className="appt">
         <div className="appt-row"><MapPin size={16} aria-hidden /><span>{snap.appointment.entity}</span></div>
         <div className="appt-row"><Clock size={16} aria-hidden /><span>{new Intl.DateTimeFormat(lang === "ar" ? "ar-AE" : "en-GB", { timeZone: "Asia/Dubai", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(snap.appointment.starts_at * 1000)}</span></div>
         <div className="appt-row"><span className={`state ${st.tone}`}>{lang === "ar" ? statusAr[snap.status] : st.label}</span></div>
@@ -67,7 +67,7 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
       {showForm && <form className="composer request-form" onSubmit={submit} aria-busy={busy}>
         {snap && compose && snap.status !== "completed" && <p className="small muted">{t("Your previous request stays active. Find it in Requests.", "يبقى طلبك السابق نشطاً. يمكنك الرجوع إليه من الطلبات.")}</p>}
         <div className="message-field">
-          <textarea ref={messageField} id="msg" name="message" autoComplete="off" dir="auto" rows={4} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("e.g. Your appointment at Rashid Hospital is on Thursday at 10:30 AM.", "مثال: موعدك في مستشفى راشد يوم الخميس الساعة 10:30 صباحاً.")} />
+          <textarea ref={messageField} id="msg" name="message" aria-describedby="msg-help" autoComplete="off" dir="auto" rows={4} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("e.g. Your appointment at Rashid Hospital is on Thursday at 10:30 AM.", "مثال: موعدك في مستشفى راشد يوم الخميس الساعة 10:30 صباحاً.")} />
         </div>
         <div className="request-examples" role="group" aria-label={t("Try an example", "جرب مثالاً")}>
           <span className="examples-label" aria-hidden>{t("Or try", "أو جرّب")}</span>

@@ -383,7 +383,7 @@ test("Arabic landing reflows at 320px and help works with a keyboard", async ({ 
   const question = page.getByText("من يستخدم عرض المنسق؟", { exact: true });
   await question.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".how details").nth(1)).toHaveAttribute("open", "");
+  await expect(page.locator(".how details", { hasText: "من يستخدم عرض المنسق؟" })).toHaveAttribute("open", "");
   await expect(page.locator(".prototype-note")).toBeVisible();
 });
 
@@ -394,7 +394,7 @@ for (const lang of ["en", "ar"]) {
     await page.evaluate(() => document.fonts.ready);
     for (const [width, height] of [[390, 844], [1280, 720], [1440, 900]]) {
       await page.setViewportSize({ width, height });
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+      await expect.poll(() => page.evaluate(() => document.querySelector(".resident-request")!.getBoundingClientRect().bottom <= innerHeight)).toBe(true);
       await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true })).toBeInViewport();
       await expect(page.locator(".pass-stage")).toBeVisible({ visible: width >= 900 });
     }
@@ -422,7 +422,7 @@ for (const lang of ["en", "ar"]) {
     for (const [width, height] of [[390, 844], [1280, 720]]) {
       await page.setViewportSize({ width, height });
       await expect(button).toBeInViewport();
-      await expect.poll(() => page.evaluate(() => ({ width: Math.max(0, document.documentElement.scrollWidth - innerWidth), height: Math.max(0, document.documentElement.scrollHeight - innerHeight) }))).toEqual({ width: 0, height: 0 });
+      await expect.poll(() => page.evaluate(() => ({ width: Math.max(0, document.documentElement.scrollWidth - innerWidth), height: Math.max(0, Math.ceil(document.querySelector(".resident-request")!.getBoundingClientRect().bottom - innerHeight)) }))).toEqual({ width: 0, height: 0 });
     }
     expect(submissions).toBe(0);
     const retry = page.getByRole("button", { name: lang === "ar" ? "حاول مجدداً" : "Try again", exact: true });
@@ -1025,4 +1025,49 @@ test("conversation falls back to staff typing when the browser has no speech rec
   await bridge.getByRole("button", { name: "Add", exact: true }).click();
   await expect(bridge.locator(".bridge-line.from-staff", { hasText: "Room 4, please." })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("the journey starts only when asked, steps by keyboard and returns to the pass", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  const story = page.getByRole("group", { name: "How a request works", exact: true });
+  await expect(story).toHaveCount(0);
+  await page.getByRole("button", { name: "See the journey", exact: true }).click();
+  await expect(story.locator('.deck-card:not([aria-hidden="true"]) h3')).toHaveText("You paste the message");
+  await expect(story.locator(".backstage")).toContainText("reading it and hiding phone numbers");
+  await story.getByRole("button", { name: "Next step", exact: true }).click();
+  await story.getByRole("button", { name: "Next step", exact: true }).click();
+  await expect(story.locator('.deck-card:not([aria-hidden="true"]) h3')).toHaveText("Ishara finds your interpreter");
+  await story.getByRole("button", { name: "Next step", exact: true }).press("ArrowRight");
+  await expect(story.locator('.deck-card:not([aria-hidden="true"]) h3')).toHaveText("Mariam is confirmed");
+  await story.getByRole("button", { name: "Next step", exact: true }).click();
+  await expect(story.getByRole("button", { name: "Replay", exact: true })).toBeVisible();
+  await story.getByRole("button", { name: "Close the journey", exact: true }).click();
+  await expect(page.getByRole("button", { name: "See the journey", exact: true })).toBeVisible();
+});
+
+test("with reduced motion the story is a plain list and the closing button returns to the form", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  const story = page.getByRole("region", { name: "How Ishara works for you", exact: true });
+  await expect(story.locator(".story-list > li")).toHaveCount(5);
+  await expect(story.locator(".story-sticky")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Ready for the visit", exact: true }).locator(".ready-tile")).toHaveCount(4);
+  await page.getByRole("button", { name: "Paste your appointment", exact: true }).click();
+  await expect(page.getByLabel("Your appointment message")).toBeFocused();
+});
+
+test("scrolling the pinned journey flips to the next chapter", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  const section = page.locator("#how-it-works");
+  await expect(section.locator(".story-sticky")).toHaveCount(1);
+  const [top, height] = await section.evaluate(e => [e.getBoundingClientRect().top + scrollY, e.offsetHeight]);
+  await page.evaluate(y => scrollTo(0, y), top + 20);
+  await expect(section.locator(".story-chapter h3")).toHaveText("You paste the message");
+  await page.evaluate(y => scrollTo(0, y), top + (height - 900) * 0.7);
+  await expect(section.locator(".story-chapter h3")).toHaveText("Mariam is confirmed");
+  await expect(section.locator(".story-sticky")).toBeInViewport();
+  await expect(section.locator(".sr-only .story-list > li")).toHaveCount(5);
 });
