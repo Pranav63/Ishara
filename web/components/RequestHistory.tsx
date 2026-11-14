@@ -124,7 +124,7 @@ export function RequestHistory({ coordinator = false, onSelect }: { coordinator?
   const changed = Object.keys(HISTORY_FILTERS).some(key => filters[key as keyof HistoryFilters] !== HISTORY_FILTERS[key as keyof HistoryFilters]);
   const extraCount = Number(Boolean(filters.from || filters.to)) + Number(filters.sort !== "newest");
   return <>
-    <button type="button" className="btn small request-history-trigger" aria-haspopup="dialog" onClick={() => setOpen(true)}><History size={18} aria-hidden />{t("Requests", "الطلبات")}</button>
+    <button type="button" className="btn small request-history-trigger" aria-haspopup="dialog" onClick={() => setOpen(true)}><History size={18} aria-hidden /><span className="btn-label">{t("Requests", "الطلبات")}</span></button>
     <Modal wide open={open} onClose={() => setOpen(false)} title={coordinator ? t("Recent requests", "الطلبات الأخيرة") : t("Your requests", "طلباتك")} closeLabel={t("Close requests", "إغلاق الطلبات")}>
       <div className="history-toolbar">
         <div className="history-top">

@@ -43,7 +43,7 @@ export function useLanguage() {
 
 export function LanguageToggle() {
   const { prefs, update } = usePreferences();
-  return <button className="btn small language-toggle" onClick={() => update({ lang: prefs.lang === "en" ? "ar" : "en" })} lang={prefs.lang === "en" ? "ar" : "en"}><Languages size={17} aria-hidden />{prefs.lang === "en" ? "العربية" : "English"}</button>;
+  return <button className="btn small language-toggle" onClick={() => update({ lang: prefs.lang === "en" ? "ar" : "en" })} lang={prefs.lang === "en" ? "ar" : "en"}><Languages size={17} aria-hidden /><span className="btn-label">{prefs.lang === "en" ? "العربية" : "English"}</span></button>;
 }
 
 export function DisplaySettings({ inline = false }: { inline?: boolean }) {

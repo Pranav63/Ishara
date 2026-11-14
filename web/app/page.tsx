@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRight, ChevronDown, CircleHelp, Menu, Play, Send, Settings2, X } from "lucide-react";
+import { Activity, ArrowRight, ChevronDown, CircleHelp, Mail, Menu, MessageCircle, MessageSquare, Play, Send, Settings2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -81,7 +81,7 @@ export default function Console() {
       <RequestHistory key={coordinator ? "coordinator" : "requester"} coordinator={coordinator} onSelect={value => { setCreated(value); setSelectedId(value.id); setCompose(false); setDrawer(false); }} />
     </>}>
       <LanguageToggle />
-      <Popover label={t("Menu", "القائمة")} align="end" trigger={<span className="btn small menu-toggle"><Menu size={18} aria-hidden />{t("Menu", "القائمة")}</span>}>
+      <Popover label={t("Menu", "القائمة")} align="end" trigger={<span className="btn small menu-toggle"><Menu size={18} aria-hidden /><span className="btn-label">{t("Menu", "القائمة")}</span></span>}>
         {(close) => <div className="workspace-menu">
           <div className="workspace-menu-head"><div><h2>{coordinator ? t("Coordinator", "المنسق") : t("Ishara", "إشارة")}</h2><Connection online={online} /></div><button type="button" className="icon-btn" aria-label={t("Close menu", "إغلاق القائمة")} onClick={close}><X size={18} aria-hidden /></button></div>
           <div className="workspace-actions">
@@ -100,7 +100,12 @@ export default function Console() {
     {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main><RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-main"><div className="resident-grid">
       <section className="resident-intro">
         <h1>{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
-        <p className="intro-description">{t("Paste the appointment you got by SMS, email or WhatsApp. Ishara books the interpreter.", "ألصق رسالة الموعد من الرسائل النصية أو البريد أو واتساب، وتحجز إشارة المترجم.")}</p>
+        <p className="intro-description">{t("Paste your appointment message. Ishara books the interpreter.", "ألصق رسالة موعدك، وتحجز إشارة المترجم.")}</p>
+        <ul className="intro-sources" aria-label={t("Works with messages from", "يعمل مع رسائل من")}>
+          <li className="src-sms"><MessageSquare size={14} aria-hidden />SMS</li>
+          <li className="src-mail"><Mail size={14} aria-hidden />{t("Email", "البريد")}</li>
+          <li className="src-wa"><MessageCircle size={14} aria-hidden />WhatsApp</li>
+        </ul>
       </section>
       <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onDraft={setDraft} reading={draftReading.busy} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} />{telegram && <p className="telegram-note"><Send size={15} aria-hidden />{t("Prefer Telegram? Forward the message to ", "تفضّل تيليجرام؟ أعد توجيه الرسالة إلى ")}<a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer" dir="ltr">@{telegram}</a>{t(" and get updates there.", " واستلم التحديثات هناك.")}</p>}<p className="prototype-note">{t("Prototype. A booking is confirmed only when an interpreter accepts.", "نموذج أولي. يتأكد الحجز فقط عند قبول مترجم.")}</p></div>
       <HomePreview reading={draftReading.reading} busy={draftReading.busy} />
