@@ -113,3 +113,14 @@ def test_bulk_archive_is_atomic_and_only_archives_selected_requests(cfg):
         assert [row["id"] for row in c.get("/api/requests").json()] == ids[2:]
         assert {row["id"] for row in c.get("/api/requests?archived=true").json()} == set(ids[:2])
         assert all(c.get(f"/api/r/{row['token']}").json()["status"] == "reviewing" for row in requests)
+
+
+def test_parse_preview_reads_without_storing(cfg):
+    with TestClient(create_app(cfg)) as c:
+        out = c.post("/api/parse", json={"text": MEDICAL}).json()
+        assert out["entity"] == "Rashid Hospital" and out["area"] == "Oud Metha" and out["domain"] == "medical"
+        assert out["hidden"] == 1 and out["assumed"] == []
+        vague = c.post("/api/parse", json={"text": "I have a check-up soon"}).json()
+        assert {"venue", "date", "time"} <= set(vague["assumed"])
+        assert c.get("/api/requests").json() == []
+        assert c.post("/api/parse", json={"text": ""}).status_code == 422

@@ -20,6 +20,7 @@ async function mockService(page: Page) {
       : path === "/api/config" ? { demo: true, operator_auth_required: false, llm: "Rules only", languages: ["UAE Sign Language"], domains: ["medical"] }
       : path === "/api/metrics" ? { requests: 1, filled: 1, median_confirm_s: 2, replans: 0 }
       : path === "/api/places" ? {}
+      : path === "/api/parse" ? { ...request.appointment, hidden: 1 }
       : path === "/api/interpreters" || path === "/api/escalations" ? []
       : request;
     if (path === "/api/stream") return route.fulfill({ contentType: "text/event-stream", body: ": test\n\n" });
@@ -498,17 +499,25 @@ for (const lang of ["en", "ar"]) {
   });
 }
 
-test("landing preview steps through the agent only when asked", async ({ page }) => {
+test("landing reads the draft live and flags what it had to guess", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
+  let reads = 0;
+  await page.route("**/api/parse", route => { reads++; const text = route.request().postDataJSON().text as string; return route.fulfill({ json: { ...request.appointment, entity: text.includes("Rashid") ? "Rashid Hospital" : "Appointment venue", assumed: text.includes("Rashid") ? [] : ["venue"], hidden: 1 } }); });
   await page.goto("/");
-  const preview = page.getByRole("figure", { name: "Example request", exact: true });
-  await expect(preview.locator(".island")).toContainText("Appointment read");
-  await page.waitForTimeout(1500);
-  await expect(preview.locator(".island")).toContainText("Appointment read");
-  const confirms = preview.getByRole("button", { name: "Confirms", exact: true });
-  await confirms.click();
-  await expect(confirms).toHaveAttribute("aria-pressed", "true");
-  await expect(preview.locator(".island")).toContainText("Mariam A. is confirmed");
+  const panel = page.getByRole("figure", { name: "Ishara reads it as you type", exact: true });
+  await expect(panel.locator(".reading-empty")).toHaveCount(6);
+  expect(reads).toBe(0);
+  await page.getByLabel("Your appointment message").fill("Need someone for my check-up soon");
+  const reading = page.getByRole("figure", { name: "Here’s what Ishara understood", exact: true });
+  await expect(reading).toContainText("Appointment venue");
+  await expect(reading.locator(".inferred")).toHaveCount(1);
+  await page.getByRole("button", { name: "Hospital", exact: true }).click();
+  await expect(reading).toContainText("Rashid Hospital");
+  await expect(reading).toContainText("1 hidden before storage");
+  await expect(reading.locator(".inferred")).toHaveCount(0);
+  expect(await page.evaluate(() => !!document.querySelector(".paste-btn"))).toBe(false);
+  await page.getByLabel("Your appointment message").fill("");
+  await expect(page.getByRole("figure", { name: "Ishara reads it as you type", exact: true })).toBeVisible();
   await openSettings(page);
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");

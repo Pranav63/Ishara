@@ -44,6 +44,7 @@ export const api = {
   metrics: () => call<Metrics>("/api/metrics"),
   places: () => call<Record<string, [number, number]>>("/api/places"),
   config: () => call<Config>("/api/config"),
+  parse: (text: string, signal?: AbortSignal) => call<Appointment & { hidden: number }>("/api/parse", { method: "POST", body: JSON.stringify({ text }), signal }),
   create: (text: string, requester_name: string) => post<Snapshot>("/api/requests", { text, requester_name }),
   approve: (token: string, appointment: Pick<Appointment, "entity" | "area" | "starts_at" | "duration_min" | "domain" | "language">) => post<Snapshot>(`/api/r/${token}/approve`, appointment),
   requester: (token: string) => call<Snapshot>(`/api/r/${token}`),

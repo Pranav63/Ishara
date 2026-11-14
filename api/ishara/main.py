@@ -19,7 +19,9 @@ from .config import Settings
 from .db import Store
 from .dispatcher import Conflict, Dispatcher, NotFound
 from .llm import LLM
-from .models import AcknowledgeIn, ApprovalIn, ArchiveIn, ArchiveManyIn, ArrivalIn, CompleteIn, OperatorLoginIn, RequestIn, RequestStatus
+from .models import AcknowledgeIn, ApprovalIn, ArchiveIn, ArchiveManyIn, ArrivalIn, CompleteIn, OperatorLoginIn, PreviewIn, RequestIn, RequestStatus
+from .parser import parse_rules
+from .redact import redact
 from .places import PLACES
 from .seed import seed
 from .telegram import Telegram
@@ -133,6 +135,12 @@ def create_app(cfg: Optional[Settings] = None) -> FastAPI:
     @app.get("/api/metrics", dependencies=[Depends(operator)])
     def metrics() -> dict:
         return d.metrics()
+
+    @app.post("/api/parse")
+    def preview(body: PreviewIn) -> dict:
+        """Read a draft message without storing it, so the form can show what the agent understood."""
+        clean, hidden = redact(body.text)
+        return {**parse_rules(clean, d.clock()).model_dump(), "hidden": hidden}
 
     @app.post("/api/requests")
     def create(body: RequestIn) -> dict:

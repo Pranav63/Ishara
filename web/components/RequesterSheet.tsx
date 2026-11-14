@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRight, ArrowUpRight, ChevronDown, ClipboardPaste, Clock, GraduationCap, IdCard, MapPin, Plus, ShieldCheck, Stethoscope } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronDown, Clock, GraduationCap, IdCard, MapPin, Plus, ShieldCheck, Stethoscope } from "lucide-react";
 
 const SAMPLE_ICONS = [Stethoscope, IdCard, GraduationCap];
 import Link from "next/link";
@@ -15,7 +15,7 @@ import { api } from "@/lib/api";
 import { SAMPLES, STATUS } from "@/lib/format";
 import type { Snapshot } from "@/lib/types";
 
-export function RequesterSheet({ snap, onCreated, composer = true, compose = false, onComposeChange, availability = "online", onRetry }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean; compose?: boolean; onComposeChange?: (compose: boolean) => void; availability?: "checking" | "online" | "offline"; onRetry?: () => void }) {
+export function RequesterSheet({ snap, onCreated, composer = true, compose = false, onComposeChange, availability = "online", onRetry, onDraft }: { snap: Snapshot | null; onCreated: (created?: Snapshot) => void; composer?: boolean; compose?: boolean; onComposeChange?: (compose: boolean) => void; availability?: "checking" | "online" | "offline"; onRetry?: () => void; onDraft?: (text: string) => void }) {
   const { t, lang } = useLanguage();
   const [min, setMin] = useState(false);
   const [text, setText] = useState("");
@@ -26,13 +26,8 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
   const messageField = useRef<HTMLTextAreaElement>(null);
   const newRequestButton = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef(false);
-  const [canPaste, setCanPaste] = useState(false);
-  useEffect(() => setCanPaste(typeof navigator.clipboard?.readText === "function"), []);
-  // Pasting the clinic's SMS is the main way in; fall back to the field if the browser refuses.
-  async function paste() {
-    try { const clip = await navigator.clipboard.readText(); if (clip.trim()) setText(clip.slice(0, 4000)); } catch {}
-    messageField.current?.focus();
-  }
+  useEffect(() => { onDraft?.(text); }, [text, onDraft]);
+
   const showForm = composer && (!snap || compose);
   const st = snap ? STATUS[snap.status] : null;
   const labels = [t("Hospital", "مستشفى"), t("Emirates ID", "الهوية الإماراتية"), t("School", "مدرسة")];
@@ -73,7 +68,6 @@ export function RequesterSheet({ snap, onCreated, composer = true, compose = fal
         {snap && compose && snap.status !== "completed" && <p className="small muted">{t("Your previous request stays active. Find it in Requests.", "يبقى طلبك السابق نشطاً. يمكنك الرجوع إليه من الطلبات.")}</p>}
         <div className="message-field">
           <textarea ref={messageField} id="msg" name="message" autoComplete="off" dir="auto" rows={4} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("e.g. Your appointment at Rashid Hospital is on Thursday at 10:30 AM.", "مثال: موعدك في مستشفى راشد يوم الخميس الساعة 10:30 صباحاً.")} />
-          {canPaste && !text && <button type="button" className="paste-btn" onClick={paste}><ClipboardPaste size={16} aria-hidden />{t("Paste", "لصق")}</button>}
         </div>
         <div className="request-examples" role="group" aria-label={t("Try an example", "جرب مثالاً")}>
           <span className="examples-label" aria-hidden>{t("Or try", "أو جرّب")}</span>

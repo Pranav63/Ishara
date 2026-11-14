@@ -39,6 +39,7 @@ export default function Console() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [created, setCreated] = useState<Snapshot | null>(null);
+  const [draft, setDraft] = useState("");
   const checkService = useCallback(() => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setServiceState("online"); }).catch(() => setServiceState("offline")), []);
   useEffect(() => {
     checkService();
@@ -89,8 +90,8 @@ export default function Console() {
         <h1>{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
         <p className="intro-description">{t("Paste your appointment message. Ishara finds a certified interpreter and keeps you updated in text.", "ألصق رسالة موعدك. تجد إشارة مترجماً معتمداً وتبقيك على اطلاع بالنص.")}</p>
       </section>
-      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
-      <HomePreview />
+      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onDraft={setDraft} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} /><p className="prototype-note">{t("Service prototype. An interpreter is confirmed only when they accept your request.", "نموذج أولي للخدمة. لا يتأكد توفر المترجم إلا بعد قبوله طلبك.")}</p></div>
+      <HomePreview text={draft} online={online} />
     </main>}
   </div></MotionRoot>;
 }
