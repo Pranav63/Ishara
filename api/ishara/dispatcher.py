@@ -158,16 +158,18 @@ class Dispatcher:
             )
             self._emit(rid, "review_required", "agent", {"text": "Please review the date, time, venue and sign language. No interpreter will be contacted until you confirm."})
 
-    def approve(self, token: str, details: ApprovalIn) -> dict:
+    def approve(self, token: str, details: ApprovalIn, name: Optional[str] = None) -> dict:
         with self.store.tx():
             req = self._requester(token)
             if req["status"] != "reviewing":
                 raise Conflict("This request is not waiting for review.")
             if not self.clock() < details.starts_at <= self.clock() + 366 * 86400:
                 raise Conflict("Choose an appointment in the future, within the next year.")
-            appt = Appointment(**details.model_dump(), source=self._appt(req).source)
+            appt = Appointment(**details.model_dump(include=set(ApprovalIn.model_fields)), source=self._appt(req).source)
             appt.entity = redact(appt.entity)[0]
             self.store.x("UPDATE requests SET appointment=? WHERE id=?", (appt.model_dump_json(), req["id"]))
+            if name is not None:
+                self.store.x("UPDATE requests SET requester_name=? WHERE id=?", (name, req["id"]))
             self._emit(req["id"], "approved", "requester", {"text": "The requester reviewed and confirmed the appointment details."})
             self._plan(req["id"])
             return self.snapshot(req["id"], ops=False)

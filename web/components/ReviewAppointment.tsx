@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, Check, Hand, MapPin, ShieldCheck } from "lucide-react";
+import { CalendarClock, Check, Hand, MapPin, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { AgentCompanion } from "@/components/AgentCompanion";
 import { useLanguage } from "@/components/Preferences";
@@ -23,6 +23,7 @@ export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Sna
   const [duration, setDuration] = useState(snap.appointment.duration_min);
   const [domain, setDomain] = useState(snap.appointment.domain);
   const [language, setLanguage] = useState(snap.appointment.language);
+  const [name, setName] = useState(snap.requester_name ?? "");
   const assumed = snap.appointment.assumed;
   const guess = (...keys: string[]) => keys.some(k => assumed.includes(k)) ? <span className="inferred">{t("Check", "تحقق")}</span> : null;
   useEffect(() => { api.places().then((p) => setPlaces(Object.keys(p))).catch(() => setError(t("Could not load supported areas. Try reloading.", "تعذر تحميل المناطق المتاحة. أعد تحميل الصفحة."))); }, []);
@@ -33,7 +34,7 @@ export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Sna
     inFlight.current = true;
     setBusy(true); setError(null);
     try {
-      await api.approve(snap.token, { entity, area, starts_at: dubaiEpoch(starts), duration_min: duration, domain, language });
+      await api.approve(snap.token, { entity, area, starts_at: dubaiEpoch(starts), duration_min: duration, domain, language, requester_name: name });
       await onDone();
     } catch (e) { setError((e as Error).message); } finally { inFlight.current = false; setBusy(false); }
   }
@@ -51,6 +52,9 @@ export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Sna
     <fieldset className="review-group"><legend><Hand size={16} aria-hidden />{t("Interpreter", "المترجم")}</legend>
       <div className="review-pair"><label htmlFor={`${id}-type`}>{t("Visit type", "نوع الزيارة")}<select id={`${id}-type`} value={domain} onChange={(e) => setDomain(e.target.value)}>{[["medical", "Medical", "طبي"], ["legal", "Legal", "قانوني"], ["government", "Government", "حكومي"], ["education", "Education", "تعليمي"], ["other", "Other", "أخرى"]].map(([v, en, ar]) => <option key={v} value={v}>{t(en, ar)}</option>)}</select></label>
       <label htmlFor={`${id}-language`}>{t("Sign language", "لغة الإشارة")}<select id={`${id}-language`} value={language} onChange={(e) => setLanguage(e.target.value)}>{[["UAE Sign Language", "Emirati Sign Language", "لغة الإشارة الإماراتية"], ["ASL", "American Sign Language (ASL)", "لغة الإشارة الأمريكية (ASL)"], ["International Sign", "International Sign", "الإشارة الدولية"]].map(([v, en, ar]) => <option key={v} value={v}>{t(en, ar)}</option>)}</select></label></div>
+    </fieldset>
+    <fieldset className="review-group"><legend><UserRound size={16} aria-hidden />{primary ? t("You", "أنت") : t("Resident", "طالب الخدمة")}</legend>
+      <label htmlFor={`${id}-name`}><span>{primary ? t("Your name", "اسمك") : t("Resident name", "اسم طالب الخدمة")} <small className="optional-hint">{t("optional", "اختياري")}</small></span><input id={`${id}-name`} name="name" autoComplete={primary ? "given-name" : "off"} dir="auto" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={primary ? t("So the interpreter can find you", "ليتعرّف عليك المترجم") : undefined} /></label>
     </fieldset>
     <p className="privacy"><ShieldCheck size={16} aria-hidden />{t("Your confirmation starts the interpreter search.", "تبدأ عملية البحث عن مترجم بعد تأكيدك.")}</p>
     <button type="submit" className="btn primary big" disabled={busy || places.length === 0}><Check size={18} aria-hidden />{busy ? t("Confirming…", "جارٍ التأكيد…") : t("Confirm request", "تأكيد الطلب")}</button>

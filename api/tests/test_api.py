@@ -124,3 +124,12 @@ def test_parse_preview_reads_without_storing(cfg):
         assert {"venue", "date", "time"} <= set(vague["assumed"])
         assert c.get("/api/requests").json() == []
         assert c.post("/api/parse", json={"text": ""}).status_code == 422
+
+
+def test_review_sets_the_name_asked_for_on_the_review_step(cfg):
+    with TestClient(create_app(cfg)) as c:
+        snap = c.post("/api/requests", json={"text": MEDICAL}).json()
+        details = {k: snap["appointment"][k] for k in ("entity", "area", "starts_at", "duration_min", "domain", "language")}
+        assert c.post(f"/api/r/{snap['token']}/approve", json={**details, "requester_name": "  Amal "}).status_code == 200
+        assert c.get(f"/api/requests/{snap['id']}").json()["requester_name"] == "Amal"
+        assert c.post(f"/api/r/{snap['token']}/approve", json={**details, "requester_name": "x" * 61}).status_code == 422

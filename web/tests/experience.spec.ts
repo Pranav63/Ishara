@@ -51,8 +51,8 @@ test("requester history retains private links across new requests and reloads", 
   await page.goto("/r/earlier-token");
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("ishara.requests") ?? "[]"))).toEqual(["earlier-token"]);
   await page.getByRole("link", { name: "Home", exact: true }).click();
-  await page.getByLabel("Your appointment message", { exact: true }).fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
-  await page.getByRole("button", { name: "Review appointment", exact: true }).click();
+  await page.getByLabel("Paste your appointment message", { exact: true }).fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page).toHaveURL(/\/r\/preview-token$/);
   await page.reload();
   await page.getByRole("button", { name: "Requests", exact: true }).click();
@@ -282,13 +282,13 @@ test("repeated form submissions send one create request and a failed draft survi
     await route.fulfill({ status: 503, json: { detail: "Please retry" } });
   });
   await page.goto("/");
-  await page.getByLabel("Your appointment message", { exact: true }).fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
-  await expect(page.getByRole("button", { name: "Review appointment", exact: true })).toBeEnabled();
+  await page.getByLabel("Paste your appointment message", { exact: true }).fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
   await page.locator(".request-form").evaluate(form => { (form as HTMLFormElement).requestSubmit(); (form as HTMLFormElement).requestSubmit(); });
   await expect.poll(() => submissions).toBe(1);
   release();
   await expect(page.locator(".request-form").getByRole("alert")).toHaveText("Please retry");
-  await expect(page.getByLabel("Your appointment message", { exact: true })).toHaveValue(/Rashid Hospital/);
+  await expect(page.getByLabel("Paste your appointment message", { exact: true })).toHaveValue(/Rashid Hospital/);
   expect(submissions).toBe(1);
 });
 
@@ -357,16 +357,15 @@ test("landing starts with the message form and an example can be reviewed", asyn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Start a request", exact: true })).toHaveCount(0);
-  await page.getByLabel("Your appointment message").click();
-  await expect(page.getByLabel("Your appointment message")).toBeFocused();
-  await page.getByRole("button", { name: "Hospital", exact: true }).click();
-  await expect(page.getByLabel("Your appointment message")).toBeFocused();
-  await expect(page.getByLabel("Your appointment message")).toHaveValue(/Rashid Hospital/);
-  await page.locator(".optional-name summary").click();
-  await page.getByLabel("Your name", { exact: true }).fill("Amal");
+  await page.getByLabel("Paste your appointment message").click();
+  await expect(page.getByLabel("Paste your appointment message")).toBeFocused();
+  await page.getByRole("button", { name: "Try an example", exact: true }).click();
+  await expect(page.getByLabel("Paste your appointment message")).toBeFocused();
+  await expect(page.getByLabel("Paste your appointment message")).toHaveValue(/Rashid Hospital/);
+  await expect(page.getByLabel("Your name")).toHaveCount(0);
   const submitted = page.waitForRequest(r => r.method() === "POST" && new URL(r.url()).pathname === "/api/requests");
-  await page.getByRole("button", { name: "Review appointment", exact: true }).click();
-  expect((await submitted).postDataJSON()).toMatchObject({ requester_name: "Amal", text: expect.stringContaining("Rashid Hospital") });
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  expect((await submitted).postDataJSON()).toMatchObject({ requester_name: "", text: expect.stringContaining("Rashid Hospital") });
   await expect(page).toHaveURL(/\/r\/preview-token$/);
 });
 
@@ -394,9 +393,9 @@ for (const lang of ["en", "ar"]) {
     await page.evaluate(() => document.fonts.ready);
     for (const [width, height] of [[390, 844], [1280, 720], [1440, 900]]) {
       await page.setViewportSize({ width, height });
-      await expect.poll(() => page.evaluate(() => document.querySelector(".resident-request")!.getBoundingClientRect().bottom <= innerHeight)).toBe(true);
-      await expect(page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true })).toBeInViewport();
-      await expect(page.locator(".pass-stage")).toBeVisible({ visible: width >= 900 });
+      await expect.poll(() => page.evaluate(() => document.querySelector(".hero-composer")!.getBoundingClientRect().bottom <= innerHeight)).toBe(true);
+      await expect(page.getByRole("button", { name: lang === "ar" ? "متابعة" : "Continue", exact: true })).toBeInViewport();
+      await expect(page.locator(".hero-orb")).toBeVisible();
     }
   });
 }
@@ -412,7 +411,7 @@ for (const lang of ["en", "ar"]) {
       ? { json: { demo: true, operator_auth_required: false } }
       : { status: 503, json: { detail: "Unavailable" } }));
     await page.goto("/");
-    const button = page.getByRole("button", { name: lang === "ar" ? "الخدمة غير متاحة" : "Service unavailable", exact: true });
+    const button = page.getByRole("button", { name: lang === "ar" ? "غير متصل" : "Offline", exact: true });
     const message = page.locator("#msg");
     await expect(button).toBeDisabled();
     await page.evaluate(() => document.fonts.ready);
@@ -422,7 +421,7 @@ for (const lang of ["en", "ar"]) {
     for (const [width, height] of [[390, 844], [1280, 720]]) {
       await page.setViewportSize({ width, height });
       await expect(button).toBeInViewport();
-      await expect.poll(() => page.evaluate(() => ({ width: Math.max(0, document.documentElement.scrollWidth - innerWidth), height: Math.max(0, Math.ceil(document.querySelector(".resident-request")!.getBoundingClientRect().bottom - innerHeight)) }))).toEqual({ width: 0, height: 0 });
+      await expect.poll(() => page.evaluate(() => ({ width: Math.max(0, document.documentElement.scrollWidth - innerWidth), height: Math.max(0, Math.ceil(document.querySelector(".hero-composer")!.getBoundingClientRect().bottom - innerHeight)) }))).toEqual({ width: 0, height: 0 });
     }
     expect(submissions).toBe(0);
     const retry = page.getByRole("button", { name: lang === "ar" ? "حاول مجدداً" : "Try again", exact: true });
@@ -430,7 +429,7 @@ for (const lang of ["en", "ar"]) {
     await expect(button).toBeDisabled();
     available = true;
     await retry.click();
-    const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true });
+    const review = page.getByRole("button", { name: lang === "ar" ? "متابعة" : "Continue", exact: true });
     await expect(review).toBeEnabled();
     await expect(retry).toBeHidden();
     available = false;
@@ -455,10 +454,10 @@ test("form waits for the initial service check before allowing submission", asyn
   });
   await page.goto("/");
   await page.locator("#msg").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM");
-  await expect(page.getByRole("button", { name: "Checking service…", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Checking…", exact: true })).toBeDisabled();
   await page.locator(".request-form").evaluate(form => (form as HTMLFormElement).requestSubmit());
   release();
-  await expect(page.getByRole("button", { name: "Review appointment", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
   expect(submissions).toBe(0);
 });
 
@@ -489,32 +488,34 @@ for (const lang of ["en", "ar"]) {
     await expect(page.locator(".review-message")).toHaveText(request.message);
     expect(approved).toBe(false);
     await page.getByLabel(lang === "ar" ? "مكان الموعد" : "Appointment location", { exact: true }).fill("Rashid Clinic");
+    await page.getByLabel(lang === "ar" ? "اسمك" : "Your name").fill("Amal");
     await confirm.click();
     await expect(page.locator(".appointment-review")).toHaveCount(0);
     await expect(page.locator(".status-card h1")).toHaveText(lang === "ar" ? "نبحث عن مترجمك" : "Finding your interpreter");
-    expect(payload).toMatchObject({ entity: "Rashid Clinic", area: "Oud Metha", duration_min: 60, language: "UAE Sign Language" });
+    expect(payload).toMatchObject({ entity: "Rashid Clinic", area: "Oud Metha", duration_min: 60, language: "UAE Sign Language", requester_name: "Amal" });
   });
 }
 
-test("landing turns the draft into a booking pass and flags guesses", async ({ page }) => {
+test("landing has one box: examples cycle, the orb wakes while writing, and nothing is parsed early", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   let reads = 0;
-  await page.route("**/api/parse", route => { reads++; const text = route.request().postDataJSON().text as string; return route.fulfill({ json: { ...request.appointment, entity: text.includes("Rashid") ? "Rashid Hospital" : "Appointment venue", assumed: text.includes("Rashid") ? [] : ["venue"], hidden: 1 } }); });
+  await page.route("**/api/parse", route => { reads++; return route.abort(); });
   await page.goto("/");
-  await expect(page.getByRole("figure", { name: "Any appointment. Paste the message, Ishara books the interpreter.", exact: true })).toBeVisible();
-  await expect(page.locator(".pass").first()).toContainText("Example");
+  await expect(page.locator(".hero h1")).toHaveText("Book a sign language interpreter");
+  await expect(page.locator(".hero-orb")).not.toHaveClass(/awake/);
+  const message = page.getByLabel("Paste your appointment message");
+  const example = page.getByRole("button", { name: "Try an example", exact: true });
+  await example.click();
+  await expect(message).toHaveValue(/Rashid Hospital/);
+  await expect(page.locator(".hero-orb")).toHaveClass(/awake/);
+  await example.click();
+  await expect(message).toHaveValue(/Emirates ID/);
+  await example.click();
+  await expect(message).toHaveValue(/Parent meeting/);
   expect(reads).toBe(0);
-  await page.getByLabel("Your appointment message").fill("Need someone for my check-up soon");
-  const pass = page.getByRole("figure", { name: "Your booking, as Ishara read it", exact: true });
-  await expect(pass.locator(".pass-back")).toContainText("Appointment venue");
-  await expect(pass.locator(".pass-back .pass-check")).toHaveCount(1);
-  await page.getByRole("button", { name: "Hospital", exact: true }).click();
-  await expect(pass.locator(".pass-back")).toContainText("Rashid Hospital");
-  await expect(pass.locator(".pass-back")).toContainText("1 private detail hidden");
-  await expect(pass.locator(".pass-back .pass-check")).toHaveCount(0);
-  await expect(pass.locator(".pass").first()).toHaveAttribute("aria-hidden", "true");
-  await page.getByLabel("Your appointment message").fill("");
-  await expect(page.getByRole("figure", { name: "Any appointment. Paste the message, Ishara books the interpreter.", exact: true })).toBeVisible();
+  await message.fill("");
+  await page.locator(".hero h1").click();
+  await expect(page.locator(".hero-orb")).not.toHaveClass(/awake/);
   await openSettings(page);
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");
@@ -552,19 +553,19 @@ test("new request shows the task, keeps extras collapsed, and Cancel preserves t
   const sheet = page.locator(".sheet");
   await expect(sheet.getByRole("heading", { name: "New request", exact: true })).toBeVisible();
   await expect(sheet.getByRole("textbox")).toHaveCount(1);
-  await expect(sheet.getByRole("button", { name: "Hospital", exact: true })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Try an example", exact: true })).toBeVisible();
   await expect(sheet.getByLabel("Your name", { exact: true })).toBeHidden();
   await expect(sheet.locator(".request-privacy .popover")).toBeHidden();
-  await expect(sheet.getByRole("button", { name: "Review appointment", exact: true })).toBeDisabled();
-  await expect(sheet.getByLabel("Your appointment message")).toBeFocused();
-  await sheet.getByLabel("Your appointment message").fill("My appointment draft");
+  await expect(sheet.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
+  await expect(sheet.getByLabel("Paste your appointment message")).toBeFocused();
+  await sheet.getByLabel("Paste your appointment message").fill("My appointment draft");
   await sheet.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(sheet.getByRole("heading", { name: "Test resident", exact: true })).toBeVisible();
   await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Done");
   await expect(page.locator(".map-full").getByText("Rashid Hospital", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "New request", exact: true })).toBeFocused();
   await page.getByRole("button", { name: "New request", exact: true }).click();
-  await expect(sheet.getByLabel("Your appointment message")).toHaveValue("My appointment draft");
+  await expect(sheet.getByLabel("Paste your appointment message")).toHaveValue("My appointment draft");
 });
 
 test("a new submission uses its own status while the latest snapshot catches up", async ({ page }) => {
@@ -576,9 +577,9 @@ test("a new submission uses its own status while the latest snapshot catches up"
   await page.goto("/");
   await coordinatorView(page);
   await page.getByRole("button", { name: "New request", exact: true }).click();
-  await page.getByLabel("Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
+  await page.getByLabel("Paste your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
   const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/requests/latest");
-  await page.getByRole("button", { name: "Review appointment", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await refreshed;
   await expect(page.locator('.progress [aria-current="step"]')).toHaveText("Review");
   await expect(page.getByRole("heading", { name: "New resident", exact: true })).toBeVisible();
@@ -596,7 +597,7 @@ test("resetting a collapsed conversation leaves the new request form editable", 
   await page.getByRole("button", { name: "Reset", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Ishara coordinator", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "New request", exact: true }).click();
-  await expect(page.getByLabel("Your appointment message")).toBeVisible();
+  await expect(page.getByLabel("Paste your appointment message")).toBeVisible();
 });
 
 for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
@@ -606,8 +607,8 @@ for (const lang of ["en", "ar"]) for (const theme of ["light", "dark"]) {
     await page.goto("/");
     await coordinatorView(page, lang);
     await page.getByRole("button", { name: lang === "ar" ? "طلب جديد" : "New request", exact: true }).click();
-    await page.getByLabel(lang === "ar" ? "رسالة موعدك" : "Your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
-    const review = page.getByRole("button", { name: lang === "ar" ? "مراجعة الموعد" : "Review appointment", exact: true });
+    await page.getByLabel(lang === "ar" ? "ألصق رسالة موعدك" : "Paste your appointment message").fill("Appointment at Rashid Hospital, 12 November at 10:30 AM.");
+    const review = page.getByRole("button", { name: lang === "ar" ? "متابعة" : "Continue", exact: true });
     await expect(review).toBeEnabled();
     await review.scrollIntoViewIfNeeded();
     const privacy = page.locator(".request-privacy .pop-trigger");
@@ -644,7 +645,7 @@ test("settings fit narrow screens and text-first mode keeps entry simple", async
   }).toBe(true);
   await page.getByLabel("Text-first mode", { exact: true }).check();
   await expect(page.locator(".sheet-head .agent-orb")).toHaveCount(0);
-  await expect(page.getByLabel("Your appointment message")).toBeVisible();
+  await expect(page.getByLabel("Paste your appointment message")).toBeVisible();
 });
 
 test("workspace menu is keyboard accessible and returns focus after actions", async ({ page }) => {
@@ -797,7 +798,7 @@ test("demo reset stays behind confirmation and the menu retains presentation and
   await expect.poll(() => resets).toBe(1);
   await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
   await page.getByRole("button", { name: "Requester", exact: true }).click();
-  await expect(page.locator(".resident-intro")).toBeVisible();
+  await expect(page.locator(".hero")).toBeVisible();
 });
 
 test("coordinator sign in retains validation and sign out from the grouped menu", async ({ page }) => {
@@ -826,7 +827,7 @@ test("coordinator sign in retains validation and sign out from the grouped menu"
   await openMenu(page);
   await expect(page.locator(".workspace-reset")).toHaveCount(0);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.locator(".resident-intro")).toBeVisible();
+  await expect(page.locator(".hero")).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Menu", exact: true })).toBeHidden();
   expect(authenticated).toBe(false);
 });
@@ -946,18 +947,22 @@ test("support acknowledgment retains a failed draft and shows the saved server u
 
 
 for (const lang of ["en", "ar"]) {
-  test(`request options open with a keyboard and retain the optional name (${lang})`, async ({ page }) => {
+  test(`home box works with a keyboard at 320px with large text (${lang})`, async ({ page }) => {
     await page.addInitScript(lang => localStorage.setItem("ishara.prefs", JSON.stringify({ lang, size: 2, theme: "dark" })), lang);
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto("/");
-    const name = page.locator(".optional-name");
-    await expect(name.locator("summary")).toHaveCSS("list-style-type", "none");
-    await name.locator("summary").focus();
+    const example = page.getByRole("button", { name: lang === "ar" ? "جرّب مثالاً" : "Try an example", exact: true });
+    await example.focus();
     await page.keyboard.press("Enter");
-    await page.getByLabel(lang === "ar" ? "اسمك" : "Your name", { exact: true }).fill("Amal");
-    await page.getByRole("button", { name: lang === "ar" ? "مستشفى" : "Hospital", exact: true }).click();
-    await expect(page.getByLabel(lang === "ar" ? "رسالة موعدك" : "Your appointment message")).toBeFocused();
-    await expect(page.getByLabel(lang === "ar" ? "اسمك" : "Your name", { exact: true })).toHaveValue("Amal");
+    await expect(page.getByLabel(lang === "ar" ? "ألصق رسالة موعدك" : "Paste your appointment message")).toBeFocused();
+    await expect(page.getByLabel(lang === "ar" ? "ألصق رسالة موعدك" : "Paste your appointment message")).toHaveValue(/Rashid Hospital/);
+    const privacy = page.locator(".request-privacy .pop-trigger");
+    await expect(privacy).toHaveAccessibleName(lang === "ar" ? "الخصوصية" : "Privacy");
+    for (const control of [example, privacy, page.getByRole("button", { name: lang === "ar" ? "متابعة" : "Continue", exact: true })]) {
+      const box = (await control.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(320);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
@@ -1026,17 +1031,6 @@ test("conversation falls back to staff typing when the browser has no speech rec
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("the home pass switches between example appointments", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
-  const pass = page.locator(".pass").first();
-  await expect(pass).toContainText("Rashid Hospital");
-  await page.getByRole("tab", { name: "Emirates ID", exact: true }).click();
-  await expect(pass).toContainText("ICP Customer Happiness Centre");
-  await page.getByRole("tab", { name: "School", exact: true }).click();
-  await expect(pass).toContainText("Parent meeting");
-});
-
 test("with reduced motion the story is a plain list and the closing button returns to the form", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
@@ -1045,7 +1039,7 @@ test("with reduced motion the story is a plain list and the closing button retur
   await expect(story.locator(".story-sticky")).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Ready for the visit", exact: true }).locator(".ready-tile")).toHaveCount(4);
   await page.getByRole("button", { name: "Paste your appointment", exact: true }).click();
-  await expect(page.getByLabel("Your appointment message")).toBeFocused();
+  await expect(page.getByLabel("Paste your appointment message")).toBeFocused();
 });
 
 test("scrolling the pinned journey flips to the next chapter", async ({ page }) => {

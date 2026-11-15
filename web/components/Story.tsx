@@ -101,6 +101,7 @@ function Closing() {
   return <section className="story-closing">
     <h2>{t("Ready when you are.", "جاهزون متى شئت.")}</h2>
     <button type="button" className="btn primary big" onClick={() => { window.scrollTo({ top: 0, behavior: "smooth" }); setTimeout(() => document.getElementById("msg")?.focus({ preventScroll: true }), 450); }}><ArrowUp size={18} aria-hidden />{t("Paste your appointment", "ألصق رسالة موعدك")}</button>
+    <p className="prototype-note">{t("Prototype. A booking is confirmed only when an interpreter accepts.", "نموذج أولي. يتأكد الحجز فقط عند قبول مترجم.")}</p>
   </section>;
 }
 

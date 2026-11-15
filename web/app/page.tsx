@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRight, ChevronDown, CircleHelp, Mail, Menu, MessageCircle, MessageSquare, Play, Send, Settings2, X } from "lucide-react";
+import { Activity, ArrowRight, ChevronDown, CircleHelp, Menu, Play, Send, Settings2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,7 +9,7 @@ import { CoordinatorOverview } from "@/components/CoordinatorOverview";
 import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { Connection, OfflineBanner, ResetButton, useMapPadding } from "@/components/Chrome";
 import { Header } from "@/components/Header";
-import { HomePreview, useDraftReading } from "@/components/HomePreview";
+import { HeroOrb } from "@/components/HeroOrb";
 import { HowItWorks } from "@/components/HowItWorks";
 import { Story } from "@/components/Story";
 import { LiquidThumb } from "@/components/LiquidThumb";
@@ -18,7 +18,7 @@ import { MotionRoot } from "@/components/Motion";
 import { OfferDock } from "@/components/OfferDock";
 import { OperatorAccess } from "@/components/OperatorAccess";
 import { DisplaySettingsDialog, LanguageToggle, useLanguage } from "@/components/Preferences";
-import { RequesterSheet } from "@/components/RequesterSheet";
+import { RequestComposer, RequesterSheet } from "@/components/RequesterSheet";
 import { Popover } from "@/components/ui";
 import { api, type OperatorSession } from "@/lib/api";
 import { useLive, useNow } from "@/lib/live";
@@ -44,6 +44,7 @@ export default function Console() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [created, setCreated] = useState<Snapshot | null>(null);
   const [draft, setDraft] = useState("");
+  const [writing, setWriting] = useState(false);
   const checkService = useCallback(() => Promise.all([api.session(), api.config()]).then(([value, config]) => { setSession(value); setAuthRequired(config.operator_auth_required); setTelegram(config.telegram); setServiceState("online"); }).catch(() => setServiceState("offline")), []);
   useEffect(() => {
     checkService();
@@ -71,7 +72,6 @@ export default function Console() {
   const events = activeSnap?.events ?? [];
   const availability = serviceState === "checking" ? "checking" : serviceState === "offline" || error ? "offline" : "online";
   const online = availability === "online";
-  const draftReading = useDraftReading(coordinator ? "" : draft, online);
 
   return <MotionRoot><div className={`${coordinator ? "console-view" : "resident-home"}${drawer ? " drawer-open" : ""}`}>
     <Header status={coordinator ? activeSnap?.status : undefined} navigation={<>
@@ -98,20 +98,16 @@ export default function Console() {
     <DisplaySettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     <HowItWorks open={helpOpen} onClose={() => setHelpOpen(false)} />
     {coordinator && <OfflineBanner online={availability !== "offline"} />}
-    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main>{!snap && !compose ? <CoordinatorOverview interpreters={data?.interpreters ?? []} metrics={data?.metrics} onNew={() => setCompose(true)} onActivity={() => setDrawer(true)} /> : <RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />}{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-main"><div className="resident-grid">
-      <section className="resident-intro">
-        <h1>{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
-        <p className="intro-description">{t("Paste your appointment message. Ishara books the interpreter.", "ألصق رسالة موعدك، وتحجز إشارة المترجم.")}</p>
-        <ul className="intro-sources" aria-label={t("Works with messages from", "يعمل مع رسائل من")}>
-          <li className="src-sms"><MessageSquare size={14} aria-hidden />SMS</li>
-          <li className="src-mail"><Mail size={14} aria-hidden />{t("Email", "البريد")}</li>
-          <li className="src-wa"><MessageCircle size={14} aria-hidden />WhatsApp</li>
-        </ul>
+    {coordinator ? <><main id="main" className="canvas"><LiveMap places={data?.places ?? {}} interpreters={data?.interpreters ?? []} snap={activeSnap} now={now} padding={padding} /></main>{!snap && !compose ? <CoordinatorOverview interpreters={data?.interpreters ?? []} metrics={data?.metrics} onNew={() => setCompose(true)} onActivity={() => setDrawer(true)} /> : <RequesterSheet snap={snap} availability={availability} onRetry={retryService} compose={compose} onComposeChange={setCompose} onCreated={(value) => { if (value) { setCreated(value); setSelectedId(value.id); setCompose(false); } refresh(); }} />}{!compose && <OfferDock key={activeSnap?.id} snap={activeSnap} interpreters={data?.interpreters ?? []} now={now} onDone={refresh} interactive={data?.config.demo === true} />}<ActivityDrawer open={drawer} onClose={() => setDrawer(false)} events={events} metrics={data?.metrics} escalations={data?.escalations} onDone={refresh} /></> : <main id="main" className="resident-main">
+      <section className="hero" aria-labelledby="hero-title">
+        <HeroOrb awake={writing || draft.trim().length > 0} />
+        <h1 id="hero-title">{t("Book a sign language interpreter", "احجز مترجم لغة إشارة")}</h1>
+        <div id="request-panel" className="hero-composer glass strong" onFocus={() => setWriting(true)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setWriting(false); }}>
+          <RequestComposer availability={availability} onRetry={retryService} onDraft={setDraft} onCreated={(created) => router.push(`/r/${created.token}`)} />
+        </div>
+        {telegram && <p className="telegram-note"><Send size={15} aria-hidden />{t("Prefer Telegram? Forward the message to ", "تفضّل تيليجرام؟ أعد توجيه الرسالة إلى ")}<a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer" dir="ltr">@{telegram}</a>{t(" and get updates there.", " واستلم التحديثات هناك.")}</p>}
+        <a className="story-link" href="#how-it-works"><ChevronDown size={16} aria-hidden />{t("How it works", "كيف تعمل")}</a>
       </section>
-      <div id="request-panel" className="resident-request"><RequesterSheet snap={null} availability={availability} onRetry={retryService} onDraft={setDraft} reading={draftReading.busy} onCreated={(created) => { if (created) router.push(`/r/${created.token}`); }} />{telegram && <p className="telegram-note"><Send size={15} aria-hidden />{t("Prefer Telegram? Forward the message to ", "تفضّل تيليجرام؟ أعد توجيه الرسالة إلى ")}<a href={`https://t.me/${telegram}`} target="_blank" rel="noopener noreferrer" dir="ltr">@{telegram}</a>{t(" and get updates there.", " واستلم التحديثات هناك.")}</p>}<p className="prototype-note">{t("Prototype. A booking is confirmed only when an interpreter accepts.", "نموذج أولي. يتأكد الحجز فقط عند قبول مترجم.")}</p></div>
-      <HomePreview reading={draftReading.reading} busy={draftReading.busy} />
-      <a className="story-link" href="#how-it-works"><ChevronDown size={16} aria-hidden />{t("How it works", "كيف تعمل")}</a>
-    </div>
     <Story />
     </main>}
   </div></MotionRoot>;

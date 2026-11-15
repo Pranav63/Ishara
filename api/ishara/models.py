@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -58,6 +58,11 @@ class ApprovalIn(BaseModel):
     duration_min: int = Field(ge=5, le=480, strict=True)
     domain: Domain
     language: Literal["UAE Sign Language", "ASL", "International Sign"]
+
+
+class ReviewIn(ApprovalIn):
+    """What the review form sends: the approved details plus the name, now asked for here."""
+    requester_name: Optional[str] = Field(default=None, max_length=60)
 
     @field_validator("area")
     @classmethod

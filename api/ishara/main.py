@@ -19,7 +19,7 @@ from .config import Settings
 from .db import Store
 from .dispatcher import Conflict, Dispatcher, NotFound
 from .llm import LLM
-from .models import AcknowledgeIn, ApprovalIn, ArchiveIn, ArchiveManyIn, ArrivalIn, CompleteIn, OperatorLoginIn, PreviewIn, RequestIn, RequestStatus
+from .models import AcknowledgeIn, ArchiveIn, ArchiveManyIn, ArrivalIn, CompleteIn, OperatorLoginIn, PreviewIn, RequestIn, RequestStatus, ReviewIn
 from .parser import parse_rules
 from .redact import redact
 from .places import PLACES
@@ -177,8 +177,8 @@ def create_app(cfg: Optional[Settings] = None) -> FastAPI:
         return d.by_requester_token(token)
 
     @app.post("/api/r/{token}/approve")
-    def approve(token: str, body: ApprovalIn) -> dict:
-        return d.approve(token, body)
+    def approve(token: str, body: ReviewIn) -> dict:
+        return d.approve(token, body, body.requester_name)
 
     @app.get("/api/escalations", dependencies=[Depends(operator)])
     def escalations() -> list:
