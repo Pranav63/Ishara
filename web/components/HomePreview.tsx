@@ -1,13 +1,20 @@
 "use client";
 
 import { m, useMotionValue, useSpring, useTransform } from "motion/react";
-import { Hand, Play, ShieldCheck } from "lucide-react";
-import { Journey } from "@/components/Journey";
-import { useEffect, useState } from "react";
+import { GraduationCap, Hand, IdCard, ShieldCheck, Stethoscope } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { LiquidThumb } from "@/components/LiquidThumb";
 import { useLanguage, usePreferences } from "@/components/Preferences";
 import { api } from "@/lib/api";
 import { areaName, languageName } from "@/lib/locale";
 import type { Appointment } from "@/lib/types";
+
+// One example per kind of visit, so the pass reads as "any appointment", not "hospitals only".
+const EXAMPLES = [
+  { key: "hospital", Icon: Stethoscope, tab: ["Hospital", "مستشفى"], place: ["Rashid Hospital", "مستشفى راشد"], area: ["Oud Metha", "عود ميثاء"], date: ["Thu 26 Nov", "الخميس 26 نوفمبر"], time: "10:30", visit: ["Medical", "طبي"], who: ["Mariam A.", "مريم أ."], initials: "MA", note: ["Arrives 10:15. Backup ready.", "تصل 10:15. البديل جاهز."] },
+  { key: "id", Icon: IdCard, tab: ["Emirates ID", "الهوية"], place: ["ICP Customer Happiness Centre", "مركز سعادة المتعاملين"], area: ["Al Barsha", "البرشاء"], date: ["Sun 29 Nov", "الأحد 29 نوفمبر"], time: "09:00", visit: ["Government", "حكومي"], who: ["Omar K.", "عمر ك."], initials: "OK", note: ["Arrives 08:45. Backup ready.", "يصل 08:45. البديل جاهز."] },
+  { key: "school", Icon: GraduationCap, tab: ["School", "مدرسة"], place: ["Parent meeting, Al Safa School", "اجتماع أولياء الأمور، مدرسة الصفا"], area: ["Al Safa", "الصفا"], date: ["Tue 1 Dec", "الثلاثاء 1 ديسمبر"], time: "15:30", visit: ["Education", "تعليمي"], who: ["Sana R.", "سناء ر."], initials: "SR", note: ["Arrives 15:15. Backup ready.", "تصل 15:15. البديل جاهز."] },
+] as const;
 
 export type Reading = Appointment & { hidden: number };
 const DOMAINS: Record<string, [string, string]> = { medical: ["Medical", "طبي"], legal: ["Legal", "قانوني"], government: ["Government", "حكومي"], education: ["Education", "تعليمي"], other: ["Other", "أخرى"] };
@@ -44,30 +51,33 @@ export function HomePreview({ reading, busy }: { reading: Reading | null; busy: 
   const guessed = (...keys: string[]) => !!reading && keys.some(k => reading.assumed.includes(k));
   const domain = reading ? DOMAINS[reading.domain] ?? DOMAINS.other : null;
   const mine = reading !== null;
-  const [journey, setJourney] = useState(false);
-  useEffect(() => { if (mine) setJourney(false); }, [mine]);
-  const showJourney = journey && !mine;
+  const [pick, setPick] = useState(0);
+  const tabs = useRef<HTMLDivElement>(null);
+  const ex = EXAMPLES[pick];
+  const tr = (pair: readonly [string, string]) => t(pair[0], pair[1]);
 
   return <figure className="pass-stage" aria-labelledby="pass-caption"
     onPointerMove={e => { if (still) return; const r = e.currentTarget.getBoundingClientRect(); x.set((e.clientX - r.left) / r.width - 0.5); y.set((e.clientY - r.top) / r.height - 0.5); }}
     onPointerLeave={() => { x.set(0); y.set(0); }}>
-    <figcaption id="pass-caption" className={showJourney ? "sr-only" : "pass-caption"}>{mine ? t("Your booking, as Ishara read it", "حجزك كما قرأته إشارة") : t("Paste a message. Ishara turns it into a booking.", "ألصق رسالة، وتحوّلها إشارة إلى حجز.")}</figcaption>
-    {showJourney ? <Journey onExit={() => setJourney(false)} /> : <>
-    {!mine && <button type="button" className="journey-start" onClick={() => setJourney(true)}><Play size={15} aria-hidden />{t("See the journey", "شاهد الرحلة")}</button>}
-    <div className="pass-float" onClick={() => { if (!mine) setJourney(true); }}>
+    <figcaption id="pass-caption" className="pass-caption">{mine ? t("Your booking, as Ishara read it", "حجزك كما قرأته إشارة") : t("Any appointment. Paste the message, Ishara books the interpreter.", "أي موعد. ألصق الرسالة، وتحجز إشارة المترجم.")}</figcaption>
+    {!mine && <div ref={tabs} className="pass-tabs liquid-tabs" role="tablist" aria-label={t("Example appointments", "أمثلة على المواعيد")}>
+      <LiquidThumb group={tabs} index={pick} />
+      {EXAMPLES.map((e, i) => <button key={e.key} type="button" role="tab" aria-selected={i === pick} aria-pressed={i === pick} onClick={() => setPick(i)}><span><e.Icon size={15} aria-hidden />{tr(e.tab)}</span></button>)}
+    </div>}
+    <div className="pass-float">
       <m.div className="pass-tilt" style={still ? undefined : { rotateX, rotateY }}>
         <m.div className="pass-flip" animate={{ rotateY: mine ? 180 : 0 }} transition={{ type: "spring", stiffness: 70, damping: 14 }}>
-          <article className="pass" aria-hidden={mine}>
+          <article className="pass" aria-hidden={mine} role={mine ? undefined : "tabpanel"}>
             <header className="pass-head"><span className="pass-mark"><Hand size={16} strokeWidth={2.4} /></span>Ishara<span className="pass-chip ok">{t("Confirmed", "مؤكد")}</span></header>
-            <p className="pass-place">{t("Rashid Hospital", "مستشفى راشد")}</p>
-            <p className="pass-area">{t("Oud Metha", "عود ميثاء")}</p>
+            <p className="pass-place"><m.span key={ex.key} initial={{ opacity: 0, filter: "blur(8px)", y: 6 }} animate={{ opacity: 1, filter: "blur(0px)", y: 0 }} transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}>{tr(ex.place)}</m.span></p>
+            <p className="pass-area">{tr(ex.area)}</p>
             <dl className="pass-grid">
-              <Field label={t("Date", "التاريخ")} value={t("Thu 26 Nov", "الخميس 26 نوفمبر")} />
-              <Field label={t("Time", "الوقت")} value="10:30" />
-              <Field label={t("Visit", "الزيارة")} value={t("Medical", "طبي")} />
+              <Field label={t("Date", "التاريخ")} value={tr(ex.date)} />
+              <Field label={t("Time", "الوقت")} value={ex.time} />
+              <Field label={t("Visit", "الزيارة")} value={tr(ex.visit)} />
               <Field label={t("Language", "اللغة")} value={t("Emirati Sign", "الإشارة الإماراتية")} />
             </dl>
-            <footer className="pass-foot"><span className="pass-avatar">MA</span><span><strong>{t("Mariam A.", "مريم أ.")}</strong><small>{t("Arrives 10:15. Backup ready.", "تصل 10:15. البديل جاهز.")}</small></span><span className="pass-tag">{t("Example", "مثال")}</span></footer>
+            <footer className="pass-foot"><span className="pass-avatar">{ex.initials}</span><span><strong>{tr(ex.who)}</strong><small>{tr(ex.note)}</small></span><span className="pass-tag">{t("Example", "مثال")}</span></footer>
           </article>
           <article className="pass pass-back" aria-hidden={!mine} aria-busy={busy}>
             <header className="pass-head"><span className="pass-mark"><Hand size={16} strokeWidth={2.4} /></span>Ishara<span className={`pass-chip${busy ? " reading" : ""}`}>{busy ? t("Reading", "أقرأ") : t("Ready to review", "جاهز للمراجعة")}</span></header>
@@ -87,6 +97,5 @@ export function HomePreview({ reading, busy }: { reading: Reading | null; busy: 
         </m.div>
       </m.div>
     </div>
-    </>}
   </figure>;
 }

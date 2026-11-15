@@ -501,7 +501,7 @@ test("landing turns the draft into a booking pass and flags guesses", async ({ p
   let reads = 0;
   await page.route("**/api/parse", route => { reads++; const text = route.request().postDataJSON().text as string; return route.fulfill({ json: { ...request.appointment, entity: text.includes("Rashid") ? "Rashid Hospital" : "Appointment venue", assumed: text.includes("Rashid") ? [] : ["venue"], hidden: 1 } }); });
   await page.goto("/");
-  await expect(page.getByRole("figure", { name: "Paste a message. Ishara turns it into a booking.", exact: true })).toBeVisible();
+  await expect(page.getByRole("figure", { name: "Any appointment. Paste the message, Ishara books the interpreter.", exact: true })).toBeVisible();
   await expect(page.locator(".pass").first()).toContainText("Example");
   expect(reads).toBe(0);
   await page.getByLabel("Your appointment message").fill("Need someone for my check-up soon");
@@ -514,7 +514,7 @@ test("landing turns the draft into a booking pass and flags guesses", async ({ p
   await expect(pass.locator(".pass-back .pass-check")).toHaveCount(0);
   await expect(pass.locator(".pass").first()).toHaveAttribute("aria-hidden", "true");
   await page.getByLabel("Your appointment message").fill("");
-  await expect(page.getByRole("figure", { name: "Paste a message. Ishara turns it into a booking.", exact: true })).toBeVisible();
+  await expect(page.getByRole("figure", { name: "Any appointment. Paste the message, Ishara books the interpreter.", exact: true })).toBeVisible();
   await openSettings(page);
   await page.getByLabel("Appearance", { exact: true }).selectOption("dark");
   await expect(page.locator(".brand")).toHaveCSS("color", "rgb(250, 250, 250)");
@@ -1026,23 +1026,15 @@ test("conversation falls back to staff typing when the browser has no speech rec
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("the journey starts only when asked, steps by keyboard and returns to the pass", async ({ page }) => {
+test("the home pass switches between example appointments", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
-  const story = page.getByRole("group", { name: "How a request works", exact: true });
-  await expect(story).toHaveCount(0);
-  await page.getByRole("button", { name: "See the journey", exact: true }).click();
-  await expect(story.locator('.deck-card:not([aria-hidden="true"]) h3')).toHaveText("You paste the message");
-  await expect(story.locator(".backstage")).toContainText("reading it and hiding phone numbers");
-  await story.getByRole("button", { name: "Next step", exact: true }).click();
-  await story.getByRole("button", { name: "Next step", exact: true }).click();
-  await expect(story.locator('.deck-card:not([aria-hidden="true"]) h3')).toHaveText("Ishara finds your interpreter");
-  await story.getByRole("button", { name: "Next step", exact: true }).press("ArrowRight");
-  await expect(story.locator('.deck-card:not([aria-hidden="true"]) h3')).toHaveText("Mariam is confirmed");
-  await story.getByRole("button", { name: "Next step", exact: true }).click();
-  await expect(story.getByRole("button", { name: "Replay", exact: true })).toBeVisible();
-  await story.getByRole("button", { name: "Close the journey", exact: true }).click();
-  await expect(page.getByRole("button", { name: "See the journey", exact: true })).toBeVisible();
+  const pass = page.locator(".pass").first();
+  await expect(pass).toContainText("Rashid Hospital");
+  await page.getByRole("tab", { name: "Emirates ID", exact: true }).click();
+  await expect(pass).toContainText("ICP Customer Happiness Centre");
+  await page.getByRole("tab", { name: "School", exact: true }).click();
+  await expect(pass).toContainText("Parent meeting");
 });
 
 test("with reduced motion the story is a plain list and the closing button returns to the form", async ({ page }) => {

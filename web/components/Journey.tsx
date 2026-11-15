@@ -1,12 +1,8 @@
 "use client";
 
-import { AnimatePresence, m, useIsPresent, type Variants } from "motion/react";
-import { CalendarPlus, Check, ChevronLeft, ChevronRight, MessagesSquare, Navigation, Pause, Play, RotateCcw, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { AgentOrb } from "@/components/AgentCompanion";
-import { useLanguage, usePreferences } from "@/components/Preferences";
+import { m, type Variants } from "motion/react";
+import { CalendarPlus, Check, MessagesSquare, Navigation } from "lucide-react";
 
-const STEP_MS = 3600;
 export type T = (en: string, ar: string) => string;
 
 // Each chapter: what the resident sees, and what the agent is doing meanwhile.
@@ -49,62 +45,3 @@ export const card: Variants = {
   enter: (dir: number) => dir < 0 ? { opacity: 0, rotateY: -100, x: -140 } : { opacity: 0, y: 50, scale: 0.86 },
   exit: (dir: number) => dir > 0 ? { opacity: 0, rotateY: -100, x: -140, transition: { duration: 0.55, ease: [0.32, 0.72, 0, 1] } } : { opacity: 0, y: 50, scale: 0.86, transition: { duration: 0.3 } },
 };
-
-// A card that is flipping away is no longer the current card, even while it animates out.
-function DeckCard({ depth, dir, children }: { depth: number; dir: number; children: React.ReactNode }) {
-  const present = useIsPresent();
-  return <m.article className="deck-card" aria-hidden={!present || depth !== 0} custom={dir} variants={card} initial="enter" exit="exit"
-    animate={{ opacity: depth === 0 ? 1 : 0.5 - depth * 0.15, y: depth * -18, scale: 1 - depth * 0.06, x: 0, rotateY: 0 }}
-    transition={{ type: "spring", stiffness: 170, damping: 22 }} style={{ zIndex: 10 - depth }}>{children}</m.article>;
-}
-
-export function Journey({ onExit }: { onExit: () => void }) {
-  const { t } = useLanguage();
-  const { prefs } = usePreferences();
-  const [step, setStep] = useState(0);
-  const [dir, setDir] = useState(1);
-  const [paused, setPaused] = useState(false);
-  const [still, setStill] = useState(true);
-  const last = CHAPTERS.length - 1;
-  useEffect(() => setStill(prefs.reducedMotion || prefs.textOnly || window.matchMedia("(prefers-reduced-motion: reduce)").matches), [prefs.reducedMotion, prefs.textOnly]);
-  const playing = !still && !paused && step < last;
-  useEffect(() => { if (!playing) return; const id = setTimeout(() => { setDir(1); setStep(s => s + 1); }, STEP_MS); return () => clearTimeout(id); }, [playing, step]);
-  const go = (to: number) => { if (to < 0 || to > last) return; setDir(to > step ? 1 : -1); setStep(to); };
-  const chapter = CHAPTERS[step];
-
-  return <div className="journey" role="group" aria-roledescription={t("story", "قصة")} aria-label={t("How a request works", "كيف يعمل الطلب")}
-    onKeyDown={e => { if (e.key === "ArrowRight") go(step + (document.dir === "rtl" ? -1 : 1)); if (e.key === "ArrowLeft") go(step + (document.dir === "rtl" ? 1 : -1)); if (e.key === "Escape") onExit(); }}>
-    <ol className="journey-progress" aria-hidden>
-      {CHAPTERS.map((_, i) => <li key={i} className={i < step || (i === last && step === last) ? "done" : i === step ? "now" : undefined}><span key={`${step}-${paused}`} style={{ animationDuration: `${STEP_MS}ms`, animationPlayState: playing ? "running" : "paused" }} /></li>)}
-    </ol>
-    <p className="sr-only" aria-live="polite">{t(`Step ${step + 1} of ${CHAPTERS.length}: ${chapter.title[0]}`, `الخطوة ${step + 1} من ${CHAPTERS.length}: ${chapter.title[1]}`)}</p>
-    <div className="deck" onClick={() => go(step + 1)}>
-      <AnimatePresence initial={false} custom={dir}>
-        {CHAPTERS.map((c, i) => {
-          const depth = i - step;
-          if (depth < 0 || depth > 2) return null;
-          return <DeckCard key={i} depth={depth} dir={dir}>
-            <h3>{t(c.title[0], c.title[1])}</h3>
-            <Visual step={i} active={depth === 0} t={t} />
-          </DeckCard>;
-        })}
-      </AnimatePresence>
-    </div>
-    <div className="backstage" aria-live="polite">
-      <AgentOrb state={chapter.orb} />
-      <AnimatePresence mode="wait" initial={false}>
-        <m.p key={step} initial={{ opacity: 0, y: 6, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} exit={{ opacity: 0, y: -6, filter: "blur(4px)" }} transition={{ duration: 0.3 }}>
-          <span>{t("Meanwhile, Ishara", "في الأثناء، إشارة")}</span> {t(chapter.backstage[0], chapter.backstage[1])}
-        </m.p>
-      </AnimatePresence>
-    </div>
-    <div className="journey-controls">
-      <button type="button" className="j-btn" aria-label={t("Previous step", "الخطوة السابقة")} disabled={step === 0} onClick={() => go(step - 1)}><ChevronLeft size={20} aria-hidden /></button>
-      {step < last
-        ? !still && <button type="button" className="j-btn" aria-label={paused ? t("Play", "تشغيل") : t("Pause", "إيقاف مؤقت")} onClick={() => setPaused(p => !p)}>{paused ? <Play size={18} aria-hidden /> : <Pause size={18} aria-hidden />}</button>
-        : <button type="button" className="j-btn wide" onClick={() => { setDir(-1); setStep(0); setPaused(false); }}><RotateCcw size={16} aria-hidden />{t("Replay", "إعادة")}</button>}
-      <button type="button" className="j-btn" aria-label={t("Next step", "الخطوة التالية")} disabled={step === last} onClick={() => go(step + 1)}><ChevronRight size={20} aria-hidden /></button>
-      <button type="button" className="j-btn close" aria-label={t("Close the journey", "إغلاق القصة")} onClick={onExit}><X size={18} aria-hidden /></button>
-    </div>
-  </div>;
-}

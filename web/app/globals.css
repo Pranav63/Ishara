@@ -540,27 +540,8 @@ html.hc .pass-stage { background: #000; }
 html.hc .pass-stage::before, html.hc .pass-stage::after { display: none; }
 html.hc .pass { background: #111; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; border: 2px solid #fff; }
 
-.pass-stage { grid-template-rows: minmax(0, 1fr) auto auto; }
-.pass-float { cursor: pointer; }
-.journey-start {
-  grid-row: 3; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 12px; padding: 0 18px; border: 0; border-radius: 999px; cursor: pointer;
-  background: rgba(255, 255, 255, 0.14); color: #fff; font: inherit; font-size: 15px; font-weight: 600;
-  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.5);
-  transition: background-color 0.2s, transform 0.3s var(--ease);
-}
-.journey-start:hover { background: rgba(255, 255, 255, 0.22); }
-.journey-start:active { transform: scale(0.97); }
 .pass-stage :focus-visible { outline-color: #fff; }
 
-/* The journey: a deck of chapter cards that flip away like pages, with the agent's work underneath. */
-.journey { grid-row: 1 / -1; align-self: stretch; width: min(100%, 440px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 16px; color: #fff; }
-.journey-progress { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.journey-progress li { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.22); overflow: hidden; }
-.journey-progress li.done { background: #fff; }
-.journey-progress li.now span { display: block; height: 100%; background: #fff; transform-origin: left; animation: progress-fill linear forwards; }
-[dir="rtl"] .journey-progress li.now span { transform-origin: right; }
-@keyframes progress-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-html.reduce-motion .journey-progress li.now span { transform: scaleX(1); }
 .deck { position: relative; display: grid; align-items: center; perspective: 1200px; cursor: pointer; min-height: 0; }
 .deck-card {
   grid-area: 1 / 1; display: grid; grid-template-rows: auto 1fr; align-items: center; gap: 18px; min-height: 290px; padding: 26px; border-radius: 30px; transform-origin: left center;
@@ -590,17 +571,6 @@ html.reduce-motion .journey-progress li.now span { transform: scaleX(1); }
 .j-confirm small { font-size: 14px; color: rgba(255, 255, 255, 0.7); }
 .j-ready { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .j-ready li { min-width: 0; overflow-wrap: anywhere; display: grid; justify-items: center; gap: 8px; padding: 18px 6px; border-radius: 20px; background: rgba(255, 255, 255, 0.12); font-size: 13px; font-weight: 600; text-align: center; }
-.backstage { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px 10px 10px; border-radius: 22px; background: rgba(0, 0, 0, 0.28); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
-[dir="rtl"] .backstage { padding: 10px 10px 10px 16px; }
-.backstage .agent-orb { width: 40px; height: 40px; }
-.backstage p { font-size: 15px; line-height: 1.4; color: rgba(255, 255, 255, 0.85); }
-.backstage p span { font-weight: 700; color: #fff; }
-.journey-controls { display: flex; justify-content: center; gap: 8px; }
-.j-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.14); color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.j-btn:hover { background: rgba(255, 255, 255, 0.24); }
-.j-btn:disabled { opacity: 0.35; cursor: default; }
-.j-btn.close { margin-inline-start: 12px; }
-[dir="rtl"] .j-btn svg.lucide-chevron-left, [dir="rtl"] .j-btn svg.lucide-chevron-right { transform: scaleX(-1); }
 
 /* While the agent reads the draft, the composer wears a living light ring in Ishara's colours. */
 @property --ring-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
@@ -1135,7 +1105,7 @@ html.hc .agent-orb::before { background: var(--tint); }
 .request-privacy .pop-anchor, .request-options { position: relative; }
 
 /* Glass on every secondary control: translucent fill, blur, rim light, specular sheen. */
-.btn:not(.primary):not(.danger), .chip:not([aria-pressed="true"]), .sample, .request-privacy .pop-trigger, .j-btn, select, .prep-action {
+.btn:not(.primary):not(.danger), .chip:not([aria-pressed="true"]), .sample, .request-privacy .pop-trigger, select, .prep-action {
   background-image: var(--glass-shine);
   -webkit-backdrop-filter: blur(18px) saturate(1.8); backdrop-filter: blur(18px) saturate(1.8);
   box-shadow: inset 0 0.5px 0 var(--glass-rim), inset 0 0 0 0.5px color-mix(in srgb, var(--glass-rim) 40%, transparent), 0 1px 2px rgba(10, 20, 60, 0.06);
@@ -1152,7 +1122,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 textarea, input:not([type="checkbox"]) { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 1px 2px rgba(10, 20, 60, 0.05); }
 textarea:focus, input:focus { box-shadow: 0 0 0 4px var(--tint-soft); }
 @media (prefers-reduced-transparency: reduce) {
-  .btn, .chip, .sample, .j-btn, .prep-action, textarea, input, .request-privacy .pop-trigger { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background-image: none !important; }
+  .btn, .chip, .sample, .prep-action, textarea, input, .request-privacy .pop-trigger { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; background-image: none !important; }
 }
 html.hc :is(.btn, .chip, .sample, .prep-action, textarea, input) { background-image: none !important; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 
@@ -1236,8 +1206,8 @@ html[data-theme="light"] .liquid-drop { mix-blend-mode: normal; background: radi
 html.hc .liquid-drop { display: none; }
 
 /* Slower, springier presses on every control. */
-.btn, .chip, .sample, .icon-btn, .j-btn, .prep-action, .pop-trigger { transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.4s var(--ease), color 0.3s, box-shadow 0.4s var(--ease), opacity 0.3s; }
-:is(.btn, .chip, .sample, .j-btn, .prep-action, .pop-trigger):active { transform: scale(0.95); transition-duration: 0.12s; }
+.btn, .chip, .sample, .icon-btn, .prep-action, .pop-trigger { transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.4s var(--ease), color 0.3s, box-shadow 0.4s var(--ease), opacity 0.3s; }
+:is(.btn, .chip, .sample, .prep-action, .pop-trigger):active { transform: scale(0.95); transition-duration: 0.12s; }
 .icon-btn:active { transform: scale(0.88); transition-duration: 0.12s; }
 .history-search input, .history-search input:focus { box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .request-history-list li::before { inset-inline-start: 8px; width: 3px; border-radius: 3px; }
@@ -1474,3 +1444,16 @@ html.hc .demo-guide { background: var(--surface); backdrop-filter: none; border:
   .coord-head { padding: 18px 18px 4px; }
   .coord-lede { padding: 4px 18px 12px; }
 }
+
+/* ---------- Home pass: example tabs ---------- */
+.pass-stage { grid-template-rows: auto minmax(0, 1fr) auto; }
+.pass-tabs { grid-row: 1; justify-self: center; }
+.pass-float { grid-row: 2; }
+.pass-caption { grid-row: 3; margin-top: 8px; }
+.pass-tabs.liquid-tabs { gap: 8px; }
+.pass-tabs.liquid-tabs > button { flex: none; min-height: 40px; padding: 0 14px; font-size: 14px; color: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)); box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.45), inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+.pass-tabs.liquid-tabs > button[aria-pressed="true"] { color: #fff; background: transparent; box-shadow: none; }
+.pass-tabs .liquid-thumb { background: radial-gradient(120% 140% at 50% 0%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%), #3d8bff; }
+.liquid-tabs > button { z-index: 2; }

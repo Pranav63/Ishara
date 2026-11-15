@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePreferences } from "@/components/Preferences";
 
-const TARGETS = ".btn, .chip, .sample, .icon-btn, .pop-trigger, .j-btn, .prep-action, .journey-start, .workspace-switch button, .history-views button, .history-request, .request-retry, .optional-name summary";
+const TARGETS = ".btn, .chip, .sample, .icon-btn, .pop-trigger, .prep-action, .pass-tabs button, .workspace-switch button, .history-views button, .history-request, .request-retry, .optional-name summary";
 // Position settles faster than size, so the drop stretches as it travels and rounds off when it lands.
 const MOVE = { stiffness: 210, damping: 24, mass: 0.9 };
 const SHAPE = { stiffness: 130, damping: 19, mass: 1 };
