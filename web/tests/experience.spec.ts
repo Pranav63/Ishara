@@ -503,6 +503,7 @@ test("landing has one box: examples cycle, the orb wakes while writing, and noth
   await page.goto("/");
   await expect(page.locator(".hero h1")).toHaveText("Book a sign language interpreter");
   await expect(page.locator(".hero-orb")).not.toHaveClass(/awake/);
+  await expect(page.getByRole("list", { name: "Works with messages from", exact: true }).getByRole("listitem")).toHaveText(["SMS", "Email", "WhatsApp"]);
   const message = page.getByLabel("Paste your appointment message");
   const example = page.getByRole("button", { name: "Try an example", exact: true });
   await example.click();

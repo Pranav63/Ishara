@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRight, ArrowUpRight, ChevronDown, Clock, IdCard, MapPin, Mail, Phone, Plus, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronDown, Clock, IdCard, MapPin, Mail, MessageCircle, MessageSquare, Phone, Plus, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AgentCompanion } from "@/components/AgentCompanion";
@@ -42,8 +42,15 @@ export function RequestComposer({ onCreated, availability = "online", onRetry, i
   }
   return <form className="composer request-form" onSubmit={submit} aria-busy={busy}>
     {note}
-    <label htmlFor="msg">{t("Paste your appointment message", "ألصق رسالة موعدك")}</label>
-    <textarea ref={field} id="msg" name="message" autoComplete="off" dir="auto" rows={3} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("From SMS, email or WhatsApp", "من رسالة نصية أو بريد أو واتساب")} />
+    <div className="composer-head">
+      <label htmlFor="msg">{t("Paste your appointment message", "ألصق رسالة موعدك")}</label>
+      <ul className="composer-sources" aria-label={t("Works with messages from", "يعمل مع رسائل من")}>
+        <li className="src-sms" title="SMS"><MessageSquare size={15} aria-hidden /><span className="sr-only">SMS</span></li>
+        <li className="src-mail" title={t("Email", "البريد")}><Mail size={15} aria-hidden /><span className="sr-only">{t("Email", "البريد")}</span></li>
+        <li className="src-wa" title="WhatsApp"><MessageCircle size={15} aria-hidden /><span className="sr-only">WhatsApp</span></li>
+      </ul>
+    </div>
+    <textarea ref={field} id="msg" name="message" autoComplete="off" dir="auto" rows={3} required minLength={8} maxLength={4000} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("Hospital, Emirates ID, school… any appointment", "مستشفى، هوية، مدرسة… أي موعد")} />
     <div className="composer-bar">
       <button type="button" className="composer-example" onClick={() => { setText(SAMPLES[example].text); setExample((example + 1) % SAMPLES.length); field.current?.focus(); }}>{t("Try an example", "جرّب مثالاً")}</button>
       <span className="request-privacy"><Popover up label={t("Privacy", "الخصوصية")} trigger={<ShieldCheck size={18} aria-hidden />}><div className="privacy-tip"><p>{t("Hidden before storage:", "تُحجب قبل التخزين:")}</p><ul><li><Phone size={14} aria-hidden />{t("Phone numbers", "أرقام الهاتف")}</li><li><Mail size={14} aria-hidden />{t("Emails", "البريد")}</li><li><IdCard size={14} aria-hidden />{t("ID numbers", "أرقام الهوية")}</li></ul></div></Popover></span>
