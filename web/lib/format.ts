@@ -49,4 +49,8 @@ export const SAMPLES = [
     label: "School meeting",
     text: "Parent meeting at the school in Mirdif on Thursday at 4:30 PM about the support plan.",
   },
+  {
+    label: "Hospital visit (Arabic)",
+    text: "دبي الصحية: تم تأكيد موعدك في مستشفى راشد، عود ميثاء، يوم الخميس الساعة ١٠:٣٠ صباحاً.",
+  },
 ];

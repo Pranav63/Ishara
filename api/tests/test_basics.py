@@ -37,6 +37,31 @@ def test_parse_flags_guesses():
     assert a.domain == "education" and {"date", "time", "location"} <= set(a.assumed)
 
 
+def test_parse_arabic_message():
+    a = parse_rules(redact("موعدك في مستشفى راشد يوم ١٢ نوفمبر الساعة ١٠:٣٠ صباحاً. للاستفسار ٠٥٠ ١٢٣ ٤٥٦٧")[0], T0)
+    local = datetime.fromtimestamp(a.starts_at, DUBAI)
+    assert (a.entity, a.area, a.domain) == ("Rashid Hospital", "Oud Metha", "medical")
+    assert (local.month, local.day, local.hour, local.minute) == (11, 12, 10, 30)
+    assert a.assumed == []
+
+
+def test_parse_arabic_relative_day_and_area():
+    a = parse_rules("موعد تجديد الهوية الإماراتية في البرشاء غداً الساعة 2 م", T0)
+    local = datetime.fromtimestamp(a.starts_at, DUBAI)
+    assert (a.area, a.domain, local.hour) == ("Al Barsha", "government", 14)
+    assert "date" not in a.assumed and "time" not in a.assumed
+
+
+def test_parse_arabic_matches_whole_words_only():
+    a = parse_rules("اجتماع مع مديرة المدرسة يوم الخميس الساعة 9 ص", T0)
+    assert a.domain == "education" and "location" in a.assumed  # not Deira, hidden inside the word for "headmistress"
+
+
+def test_redact_reads_arabic_digits():
+    text, n = redact("اتصل على ٠٥٠ ١٢٣ ٤٥٦٧")
+    assert n == 1 and "[PHONE]" in text
+
+
 def _interps():
     return [
         {"id": i, "name": n, "languages": l, "domains": dm, "certified": c, "area": ar, "reliability": r, "available": True}

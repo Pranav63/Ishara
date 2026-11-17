@@ -7,7 +7,7 @@ from typing import Optional
 from .llm import LLM
 from .models import Appointment
 from .places import ENTITIES, PLACES
-from .redact import redact
+from .redact import DIGITS, redact
 from .timefmt import DUBAI
 
 _MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
@@ -34,6 +34,44 @@ _SCHEMA = {
     },
     "required": ["entity", "area", "starts_at", "domain"],
 }
+
+# Arabic is rewritten into the English words the rules below already read. Keys are in
+# normalised form (no diacritics, plain alef); longer phrases are replaced first.
+# ponytail: a word list, not a translator. Unknown venues and phrasing fall to the model or the review step.
+_ARABIC = {
+    "مستشفى راشد": "rashid hospital", "مستشفى لطيفة": "latifa hospital", "المستشفى الامريكي": "american hospital",
+    "مستشفى دبي": "dubai hospital", "ميديكلينيك سيتي": "mediclinic city",
+    "مدينة دبي الطبية": "healthcare city", "عود ميثاء": "oud metha", "بر دبي": "bur dubai", "ديرة": "deira",
+    "الكرامة": "karama", "القوز": "al quoz", "جميرا": "jumeirah", "مرسى دبي": "dubai marina", "دبي مارينا": "dubai marina",
+    "ابراج بحيرات جميرا": "jlt", "الخليج التجاري": "business bay", "وسط المدينة": "downtown", "البرشاء": "al barsha",
+    "واحة دبي للسيليكون": "dubai silicon oasis", "مردف": "mirdif", "القصيص": "al qusais", "النهدة": "al nahda",
+    "مستشفى": "hospital", "عيادة": "clinic", "طبيب": "doctor", "دكتور": "doctor", "اسنان": "dental", "اشعة": "radiology",
+    "محكمة": "court", "شرطة": "police", "نيابة": "prosecution", "محامي": "lawyer", "جلسة": "hearing",
+    "الهوية الاماراتية": "emirates id", "تاشيرة": "visa", "اقامة": "visa", "الجوازات": "immigration",
+    "بلدية": "municipality", "وزارة": "ministry", "رخصة": "licence", "هيئة الطرق": "rta",
+    "مدرسة": "school", "جامعة": "university", "معلم": "teacher", "ولي الامر": "parent",
+    "لغة الاشارة الامريكية": "american sign", "لغة الاشارة الدولية": "international sign",
+    "يناير": "january", "فبراير": "february", "مارس": "march", "ابريل": "april", "مايو": "may", "يونيو": "june",
+    "يوليو": "july", "اغسطس": "august", "سبتمبر": "september", "اكتوبر": "october", "نوفمبر": "november", "ديسمبر": "december",
+    "الاثنين": "monday", "الثلاثاء": "tuesday", "الاربعاء": "wednesday", "الخميس": "thursday", "الجمعة": "friday",
+    "السبت": "saturday", "الاحد": "sunday",
+    "بعد غد": "",  # the day after tomorrow: left unread, so the date is flagged as assumed
+    "غدا": "tomorrow", "بكرة": "tomorrow", "اليوم": "today",
+    "صباحا": "am", "مساء": "pm", "ظهرا": "pm", "عصرا": "pm",
+}
+# Whole words only, allowing the attached particles (wa-, bi-, li-, al-): "ديرة" must not match inside "مديرة".
+_ARABIC_RE = re.compile(
+    "(?<![\u0600-\u06ff])(?:[وف]?(?:لل|[بلك]?(?:ال)?))?("
+    + "|".join(sorted(map(re.escape, _ARABIC), key=len, reverse=True))
+    + ")(?![\u0600-\u06ff])"
+)
+_MARKS = re.compile("[\u064b-\u0652\u0640]")  # diacritics and tatweel
+
+
+def _from_arabic(low: str) -> str:
+    low = _MARKS.sub("", low.translate(DIGITS)).translate(str.maketrans("أإآ", "ااا"))
+    low = re.sub(r"(\d)\s*([صم])(?![\u0600-\u06ff])", lambda m: f"{m[1]} {'am' if m[2] == 'ص' else 'pm'}", low)
+    return _ARABIC_RE.sub(lambda m: f" {_ARABIC[m[1]]} ", low)
 
 
 def _domain(low: str) -> str:
@@ -92,7 +130,7 @@ def _time(low: str):
 
 
 def parse_rules(text: str, now: float) -> Appointment:
-    low = text.lower()
+    low = _from_arabic(text.lower())
     today = datetime.fromtimestamp(now, DUBAI)
     assumed = []
 
