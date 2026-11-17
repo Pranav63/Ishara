@@ -174,7 +174,8 @@ def refine_with_llm(text: str, base: Appointment, llm: LLM, now: float) -> Appoi
         return base
     today = datetime.fromtimestamp(now, DUBAI).strftime("%A %d %B %Y")
     system = (
-        f"Extract one appointment from the message. Today is {today} (Dubai time). Reply with JSON only. "
+        f"Extract one appointment from the message. Today is {today} (Dubai time). Reply with JSON only, using exactly these keys: "
+        "entity (the venue name), area, starts_at, duration_min, domain, language. "
         f"area must be one of: {', '.join(PLACES)}. starts_at is local time as YYYY-MM-DDTHH:MM, or null if "
         "missing. domain is medical, legal, government, education or other. "
         "language is 'UAE Sign Language' unless the message asks for ASL or International Sign."
