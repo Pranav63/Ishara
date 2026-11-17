@@ -42,8 +42,8 @@ export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Sna
     <div className="review-heading"><div><Heading id={`${id}-heading`}>{primary ? t("Review your appointment", "راجع موعدك") : t("Appointment details", "تفاصيل الموعد")}</Heading><p className="small muted">{primary ? t("Ishara filled this in from your message. Fix anything that looks wrong.", "ملأت إشارة هذه التفاصيل من رسالتك. صحّح أي شيء غير دقيق.") : t("Waiting for the resident to confirm. Dubai time (UTC+4).", "بانتظار تأكيد طالب الخدمة. بتوقيت دبي (UTC+4).")}</p></div>{primary && <AgentCompanion status="reviewing" />}</div>
     {snap.appointment.assumed.length > 0 && <p className="review-note">{t("Fields marked Check were guessed.", "الحقول المعلّمة بـ«تحقق» تم استنتاجها.")}</p>}
     <fieldset className="review-group"><legend><MapPin size={16} aria-hidden />{t("Where", "المكان")}</legend>
-      <label htmlFor={`${id}-venue`}><span>{t("Appointment location", "مكان الموعد")}{guess("venue")}</span><input id={`${id}-venue`} value={entity} onChange={(e) => setEntity(e.target.value)} required minLength={2} maxLength={120} /></label>
-      <label htmlFor={`${id}-area`}><span>{t("Dubai area", "المنطقة في دبي")}{guess("location")}</span><select id={`${id}-area`} value={area} onChange={(e) => setArea(e.target.value)} required><option value="" disabled>{t("Choose an area", "اختر المنطقة")}</option>{places.map((p) => <option key={p} value={p}>{areaName(p, lang)}</option>)}</select></label>
+      <div className="review-pair"><label htmlFor={`${id}-venue`}><span>{t("Appointment location", "مكان الموعد")}{guess("venue")}</span><input id={`${id}-venue`} value={entity} onChange={(e) => setEntity(e.target.value)} required minLength={2} maxLength={120} /></label>
+      <label htmlFor={`${id}-area`}><span>{t("Dubai area", "المنطقة في دبي")}{guess("location")}</span><select id={`${id}-area`} value={area} onChange={(e) => setArea(e.target.value)} required><option value="" disabled>{t("Choose an area", "اختر المنطقة")}</option>{places.map((p) => <option key={p} value={p}>{areaName(p, lang)}</option>)}</select></label></div>
     </fieldset>
     <fieldset className="review-group"><legend><CalendarClock size={16} aria-hidden />{t("When", "الموعد")}</legend>
       <div className="review-pair"><label htmlFor={`${id}-when`}><span>{t("Date & time · Dubai", "التاريخ والوقت · دبي")}{guess("date", "time")}</span><input dir="ltr" id={`${id}-when`} type="datetime-local" value={starts} onChange={(e) => setStarts(e.target.value)} required /></label>
@@ -56,8 +56,11 @@ export function ReviewAppointment({ snap, onDone, primary = false }: { snap: Sna
     <fieldset className="review-group"><legend><UserRound size={16} aria-hidden />{primary ? t("You", "أنت") : t("Resident", "طالب الخدمة")}</legend>
       <label htmlFor={`${id}-name`}><span>{primary ? t("Your name", "اسمك") : t("Resident name", "اسم طالب الخدمة")} <small className="optional-hint">{t("optional", "اختياري")}</small></span><input id={`${id}-name`} name="name" autoComplete={primary ? "given-name" : "off"} dir="auto" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={primary ? t("So the interpreter can find you", "ليتعرّف عليك المترجم") : undefined} /></label>
     </fieldset>
-    <p className="privacy"><ShieldCheck size={16} aria-hidden />{t("Your confirmation starts the interpreter search.", "تبدأ عملية البحث عن مترجم بعد تأكيدك.")}</p>
-    <button type="submit" className="btn primary big" disabled={busy || places.length === 0}><Check size={18} aria-hidden />{busy ? t("Confirming…", "جارٍ التأكيد…") : t("Confirm request", "تأكيد الطلب")}</button>
-    {error && <p className="error" role="alert">{error}</p>}
+    {/* Sticky, so Confirm stays in view however long the form gets. */}
+    <div className="review-actions">
+      <p className="privacy"><ShieldCheck size={16} aria-hidden />{t("Your confirmation starts the interpreter search.", "تبدأ عملية البحث عن مترجم بعد تأكيدك.")}</p>
+      <button type="submit" className="btn primary big" disabled={busy || places.length === 0}><Check size={18} aria-hidden />{busy ? t("Confirming…", "جارٍ التأكيد…") : t("Confirm request", "تأكيد الطلب")}</button>
+      {error && <p className="error" role="alert">{error}</p>}
+    </div>
   </form>;
 }
