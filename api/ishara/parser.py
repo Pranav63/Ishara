@@ -61,16 +61,16 @@ _ARABIC = {
 }
 # Whole words only, allowing the attached particles (wa-, bi-, li-, al-): "ديرة" must not match inside "مديرة".
 _ARABIC_RE = re.compile(
-    "(?<![\u0600-\u06ff])(?:[وف]?(?:لل|[بلك]?(?:ال)?))?("
+    "(?<![\u0621-\u064a])(?:[وف]?(?:لل|[بلك]?(?:ال)?))?("
     + "|".join(sorted(map(re.escape, _ARABIC), key=len, reverse=True))
-    + ")(?![\u0600-\u06ff])"
+    + ")(?![\u0621-\u064a])"
 )
 _MARKS = re.compile("[\u064b-\u0652\u0640]")  # diacritics and tatweel
 
 
 def _from_arabic(low: str) -> str:
     low = _MARKS.sub("", low.translate(DIGITS)).translate(str.maketrans("أإآ", "ااا"))
-    low = re.sub(r"(\d)\s*([صم])(?![\u0600-\u06ff])", lambda m: f"{m[1]} {'am' if m[2] == 'ص' else 'pm'}", low)
+    low = re.sub(r"(\d)\s*([صم])(?![\u0621-\u064a])", lambda m: f"{m[1]} {'am' if m[2] == 'ص' else 'pm'}", low)
     return _ARABIC_RE.sub(lambda m: f" {_ARABIC[m[1]]} ", low)
 
 

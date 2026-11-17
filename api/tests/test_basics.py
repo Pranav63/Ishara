@@ -38,7 +38,7 @@ def test_parse_flags_guesses():
 
 
 def test_parse_arabic_message():
-    a = parse_rules(redact("موعدك في مستشفى راشد يوم ١٢ نوفمبر الساعة ١٠:٣٠ صباحاً. للاستفسار ٠٥٠ ١٢٣ ٤٥٦٧")[0], T0)
+    a = parse_rules(redact("موعدك في مستشفى راشد، عود ميثاء، يوم ١٢ نوفمبر الساعة ١٠:٣٠ صباحاً. للاستفسار ٠٥٠ ١٢٣ ٤٥٦٧")[0], T0)
     local = datetime.fromtimestamp(a.starts_at, DUBAI)
     assert (a.entity, a.area, a.domain) == ("Rashid Hospital", "Oud Metha", "medical")
     assert (local.month, local.day, local.hour, local.minute) == (11, 12, 10, 30)
